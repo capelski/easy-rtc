@@ -1,11 +1,11 @@
-export type RemoteData = {
+export type PeerData = {
     c: RTCIceCandidateInit[];
     s: RTCSessionDescriptionInit;
 };
 
 export interface PeerToPeerHandlers {
     onConnectionReady?: () => void;
-    onLocalDataReady: (peerData: RemoteData) => void;
+    onLocalDataReady: (peerData: PeerData) => void;
     onMessageReceived: (message: string) => void;
 }
 
@@ -46,12 +46,11 @@ export class PeerToPeerMessaging {
         this.rtcConnection.close();
     }
 
-    async establishConnection(remoteData: RemoteData) {
+    async establishConnection(remoteData: PeerData) {
         await this.rtcConnection.setRemoteDescription(remoteData.s);
-        console.log(this.rtcConnection.connectionState, this.rtcConnection.signalingState);
     }
 
-    async joinSession(remoteData: RemoteData) {
+    async joinSession(remoteData: PeerData) {
         await this.rtcConnection.setRemoteDescription(remoteData.s);
 
         for (const candidate of remoteData.c) {

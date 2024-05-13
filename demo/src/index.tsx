@@ -3,13 +3,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import QRCode from 'react-qr-code';
 import {
+    PeerData,
     PeerToPeerHandlers,
     PeerToPeerMessaging,
-    RemoteData,
 } from '../../src/peer-to-peer-messaging';
+import { compressRemoteData, decompressRemoteData } from './compression';
 import { useForeignerEvents } from './use-foreigner-events';
 
-export const remoteDataQueryStringParameter = 'd';
+export const remoteDataParameterName = 'd';
 
 interface Message {
     sender: 'You' | 'They';
@@ -51,7 +52,7 @@ function App() {
         setPeerMode(PeerMode.joiner);
         setPeerToPeerMessaging(nextPeerToPeerConnection);
 
-        const parsedData: RemoteData = JSON.parse(data);
+        const parsedData: PeerData = JSON.parse(data);
         nextPeerToPeerConnection.joinSession(parsedData);
     };
 
@@ -59,9 +60,9 @@ function App() {
 
     useEffect(() => {
         const params = new URL(document.location.toString()).searchParams;
-        const data = params.get('d');
+        const data = params.get(remoteDataParameterName);
         if (data) {
-            joinSessionHandler(data);
+            joinSessionHandler(decompressRemoteData(data));
         }
     }, []);
 
@@ -70,14 +71,12 @@ function App() {
             const qrScanner = new QrScanner(
                 videoRef.current,
                 (result) => {
-                    const parsedData: RemoteData = JSON.parse(result.data);
+                    const parsedData: PeerData = JSON.parse(decompressRemoteData(result.data));
                     peerToPeerMessaging?.establishConnection(parsedData);
 
                     qrScanner.stop();
                 },
-                {
-                    onDecodeError: console.log,
-                },
+                {},
             );
             qrScanner.start();
         }
@@ -147,7 +146,7 @@ function App() {
                     {localData &&
                         (peerMode === PeerMode.joiner ? (
                             <QRCode
-                                value={localData}
+                                value={compressRemoteData(localData)}
                                 size={0.9 * Math.min(window.innerHeight, window.innerWidth)}
                                 style={{ width: '100%' }}
                             />
@@ -157,8 +156,8 @@ function App() {
                                     onClick={() => {
                                         const url = new URL(window.location.href);
                                         url.searchParams.append(
-                                            remoteDataQueryStringParameter,
-                                            localData,
+                                            remoteDataParameterName,
+                                            compressRemoteData(localData),
                                         );
                                         navigator.clipboard.writeText(url.toString());
                                     }}
