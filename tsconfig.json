@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "forceConsistentCasingInFileNames": true,
+        "lib": ["dom", "es2020"],
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "strictNullChecks": true,
+        "target": "es6"
+    },
+    "include": ["src"]
+}

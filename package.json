@@ -1,0 +1,13 @@
+{
+    "name": "peer-to-peer-messaging",
+    "version": "1.0.0",
+    "scripts": {
+        "build": "npm run clean && tsc -p tsconfig.json",
+        "clean": "rm -rf dist"
+    },
+    "author": "Carles Capellas <capellas.carles@gmail.com>",
+    "license": "ISC",
+    "devDependencies": {
+        "typescript": "^5.4.5"
+    }
+}
