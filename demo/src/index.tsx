@@ -56,6 +56,25 @@ function App() {
         nextPeerToPeerConnection.joinSession(parsedData);
     };
 
+    const scanQrHandler = async () => {
+        await navigator.mediaDevices.getUserMedia({
+            video: true,
+        });
+
+        const qrScanner = new QrScanner(
+            videoRef.current!,
+            (result) => {
+                const parsedData: PeerData = JSON.parse(decompressRemoteData(result.data));
+                peerToPeerMessaging?.establishConnection(parsedData);
+
+                qrScanner.stop();
+            },
+            {},
+        );
+
+        qrScanner.start();
+    };
+
     const videoRef = useRef(null);
 
     useEffect(() => {
@@ -65,32 +84,6 @@ function App() {
             joinSessionHandler(decompressRemoteData(data));
         }
     }, []);
-
-    useEffect(() => {
-        if (videoRef.current && localData) {
-            console.log('Requesting camera permissions');
-            navigator.mediaDevices
-                .getUserMedia({
-                    video: true,
-                })
-                .then(() => {
-                    const qrScanner = new QrScanner(
-                        videoRef.current!,
-                        (result) => {
-                            const parsedData: PeerData = JSON.parse(
-                                decompressRemoteData(result.data),
-                            );
-                            peerToPeerMessaging?.establishConnection(parsedData);
-
-                            qrScanner.stop();
-                        },
-                        {},
-                    );
-                    qrScanner.start();
-                })
-                .catch(console.log);
-        }
-    }, [videoRef.current, localData]);
 
     foreignerMessages.processEvents(messages);
 
@@ -161,29 +154,32 @@ function App() {
                                 style={{ width: '100%' }}
                             />
                         ) : (
-                            <p>
-                                <button
-                                    onClick={() => {
-                                        const url = new URL(window.location.href);
-                                        console.log(compressRemoteData(localData));
-                                        url.searchParams.append(
-                                            remoteDataParameterName,
-                                            compressRemoteData(localData),
-                                        );
-                                        navigator.clipboard.writeText(url.toString());
-                                    }}
-                                    type="button"
-                                >
-                                    Copy session link
-                                </button>
-                            </p>
-                        ))}
+                            <div>
+                                <p>
+                                    <button
+                                        onClick={() => {
+                                            const url = new URL(window.location.href);
+                                            console.log(compressRemoteData(localData));
+                                            url.searchParams.append(
+                                                remoteDataParameterName,
+                                                compressRemoteData(localData),
+                                            );
+                                            navigator.clipboard.writeText(url.toString());
+                                        }}
+                                        type="button"
+                                    >
+                                        Copy session link
+                                    </button>
+                                </p>
+                                <p>
+                                    <button onClick={scanQrHandler} type="button">
+                                        Scan QR
+                                    </button>
+                                </p>
 
-                    {peerMode === PeerMode.starter && localData && (
-                        <p>
-                            <video ref={videoRef} width="100%"></video>
-                        </p>
-                    )}
+                                <video ref={videoRef} width="100%"></video>
+                            </div>
+                        ))}
                 </React.Fragment>
             )}
         </div>
