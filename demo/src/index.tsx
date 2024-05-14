@@ -68,6 +68,7 @@ function App() {
 
     useEffect(() => {
         if (videoRef.current && localData) {
+            console.log('Requesting camera permissions');
             navigator.mediaDevices
                 .getUserMedia({
                     video: true,
@@ -89,7 +90,7 @@ function App() {
                 })
                 .catch(console.log);
         }
-    }, [videoRef.current]);
+    }, [videoRef.current, localData]);
 
     foreignerMessages.processEvents(messages);
 
