@@ -86,7 +86,8 @@ function App() {
                         {},
                     );
                     qrScanner.start();
-                });
+                })
+                .catch(console.log);
         }
     }, [videoRef.current]);
 
@@ -163,6 +164,7 @@ function App() {
                                 <button
                                     onClick={() => {
                                         const url = new URL(window.location.href);
+                                        console.log(compressRemoteData(localData));
                                         url.searchParams.append(
                                             remoteDataParameterName,
                                             compressRemoteData(localData),
