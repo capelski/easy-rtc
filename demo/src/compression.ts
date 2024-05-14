@@ -25,7 +25,6 @@ const compressionTransformations = [
     [':actpass', '$x'],
     ['ufrag', '$z'],
     ['"', '_'],
-    [':', '*'],
 ];
 
 export const compressRemoteData = (data: string): string => {
