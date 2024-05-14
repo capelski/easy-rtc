@@ -4,6 +4,7 @@ export type PeerData = {
 };
 
 export interface PeerToPeerHandlers {
+    onConnectionClosed?: () => void;
     onConnectionReady?: () => void;
     onMessageReceived: (message: string) => void;
 }
@@ -43,6 +44,11 @@ export class PeerToPeerMessaging {
                 this.handlers.onConnectionReady
             ) {
                 this.handlers.onConnectionReady();
+            } else if (
+                this.rtcConnection.connectionState === 'disconnected' &&
+                this.handlers.onConnectionClosed
+            ) {
+                this.handlers.onConnectionClosed();
             }
         };
     }

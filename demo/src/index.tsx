@@ -34,6 +34,7 @@ function App() {
     const foreignerMessages = useForeignerEvents<Message>(setMessages);
 
     const eventHandlers: PeerToPeerHandlers = {
+        onConnectionClosed: reset,
         onConnectionReady: () => setConnectionReady(true),
         onMessageReceived: (message) =>
             foreignerMessages.registerEvent({ sender: 'They', text: message }),
