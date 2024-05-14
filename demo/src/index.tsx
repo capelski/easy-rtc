@@ -68,17 +68,25 @@ function App() {
 
     useEffect(() => {
         if (videoRef.current && localData) {
-            const qrScanner = new QrScanner(
-                videoRef.current,
-                (result) => {
-                    const parsedData: PeerData = JSON.parse(decompressRemoteData(result.data));
-                    peerToPeerMessaging?.establishConnection(parsedData);
+            navigator.mediaDevices
+                .getUserMedia({
+                    video: true,
+                })
+                .then(() => {
+                    const qrScanner = new QrScanner(
+                        videoRef.current!,
+                        (result) => {
+                            const parsedData: PeerData = JSON.parse(
+                                decompressRemoteData(result.data),
+                            );
+                            peerToPeerMessaging?.establishConnection(parsedData);
 
-                    qrScanner.stop();
-                },
-                {},
-            );
-            qrScanner.start();
+                            qrScanner.stop();
+                        },
+                        {},
+                    );
+                    qrScanner.start();
+                });
         }
     }, [videoRef.current]);
 
