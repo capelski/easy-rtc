@@ -1,3 +1,5 @@
+import { PeerData } from '../../src/peer-to-peer-messaging';
+
 const compressionTransformations = [
     ['\\r\\na=extmap-allow-mixed', '_a'],
     ['\\r\\na=fingerprint', '_b'],
@@ -38,14 +40,16 @@ const compressionTransformations = [
     ['\\', '_Z'],
 ];
 
-export const compressRemoteData = (data: string): string => {
-    return compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
-        return reduced.replaceAll(text, symbol);
-    }, data);
+export const deserializePeerData = (data: string): PeerData => {
+    return JSON.parse(
+        compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
+            return reduced.replaceAll(symbol, text);
+        }, data),
+    );
 };
 
-export const decompressRemoteData = (data: string): string => {
+export const serializePeerData = (peerData: PeerData): string => {
     return compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
-        return reduced.replaceAll(symbol, text);
-    }, data);
+        return reduced.replaceAll(text, symbol);
+    }, JSON.stringify(peerData));
 };
