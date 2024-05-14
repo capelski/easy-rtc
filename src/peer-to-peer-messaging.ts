@@ -5,7 +5,6 @@ export type PeerData = {
 
 export interface PeerToPeerHandlers {
     onConnectionReady?: () => void;
-    onLocalDataReady: (peerData: PeerData) => void;
     onMessageReceived: (message: string) => void;
 }
 
@@ -16,17 +15,23 @@ export class PeerToPeerMessaging {
     protected session: RTCSessionDescriptionInit | undefined;
     protected dataChannel: RTCDataChannel | undefined;
 
+    protected peerDataReadyTimeout: number | undefined;
+    protected peerDataResolver: ((peerData: PeerData) => void) | undefined;
+
     constructor(protected handlers: PeerToPeerHandlers) {
         this.rtcConnection.onicecandidate = (event) => {
-            /* Each event.candidate generated after creating the offer
-            must be added by the peer answering the connection */
             if (event.candidate) {
                 this.localIceCandidates.push(event.candidate);
-                this.handlers.onLocalDataReady({ c: this.localIceCandidates, s: this.session! });
+
+                if (this.peerDataReadyTimeout) {
+                    clearTimeout(this.peerDataReadyTimeout);
+                }
+                this.peerDataReadyTimeout = window.setTimeout(() => {
+                    this.peerDataResolver!({ c: this.localIceCandidates, s: this.session! });
+                }, 300);
             }
         };
 
-        /* This method is called when the peer creates a channel */
         this.rtcConnection.ondatachannel = (event) => {
             const dataChannel = event.channel;
             this.setDataChannelHandlers(dataChannel);
@@ -34,8 +39,8 @@ export class PeerToPeerMessaging {
 
         this.rtcConnection.onconnectionstatechange = () => {
             if (
-                this.handlers.onConnectionReady &&
-                this.rtcConnection.connectionState === 'connected'
+                this.rtcConnection.connectionState === 'connected' &&
+                this.handlers.onConnectionReady
             ) {
                 this.handlers.onConnectionReady();
             }
@@ -46,19 +51,29 @@ export class PeerToPeerMessaging {
         this.rtcConnection.close();
     }
 
-    async establishConnection(remoteData: PeerData) {
-        await this.rtcConnection.setRemoteDescription(remoteData.s);
+    /** Completes the connection and calls onConnectionReady when done */
+    completeConnection(remoteData: PeerData) {
+        this.rtcConnection.setRemoteDescription(remoteData.s);
     }
 
-    async joinSession(remoteData: PeerData) {
+    /** Joins the connection defined by remoteData and returns the data needed by
+     * the other peer to complete the connection */
+    async joinConnection(remoteData: PeerData) {
         await this.rtcConnection.setRemoteDescription(remoteData.s);
 
         for (const candidate of remoteData.c) {
             await this.rtcConnection.addIceCandidate(candidate);
         }
 
+        const connectionPromise = new Promise<PeerData>((resolve) => {
+            this.peerDataResolver = resolve;
+        });
+
         this.session = await this.rtcConnection.createAnswer();
+        /* This will generate several ICE candidates, which will resolve the returned promise */
         await this.rtcConnection.setLocalDescription(this.session);
+
+        return connectionPromise;
     }
 
     send(message: string) {
@@ -70,12 +85,20 @@ export class PeerToPeerMessaging {
         return false;
     }
 
-    async startSession() {
+    /** Starts a connection and returns the data needed by the other peer to join the connection */
+    async startConnection() {
         const dataChannel = this.rtcConnection.createDataChannel('data-channel');
         this.setDataChannelHandlers(dataChannel);
 
+        const connectionPromise = new Promise<PeerData>((resolve) => {
+            this.peerDataResolver = resolve;
+        });
+
         this.session = await this.rtcConnection.createOffer();
+        /* This will generate several ICE candidates, which will resolve the returned promise */
         await this.rtcConnection.setLocalDescription(this.session);
+
+        return connectionPromise;
     }
 
     private setDataChannelHandlers(dataChannel: RTCDataChannel) {

@@ -24,55 +24,71 @@ enum PeerMode {
 
 function App() {
     const [connectionReady, setConnectionReady] = useState(false);
+    const [localPeerData, setLocalPeerData] = useState('');
     const [messages, setMessages] = useState<Message[]>([]);
     const [peerMode, setPeerMode] = useState<PeerMode>();
     const [peerToPeerMessaging, setPeerToPeerMessaging] = useState<PeerToPeerMessaging>();
-    const [localData, setLocalData] = useState('');
+    const [remotePeerData, setRemotePeerData] = useState('');
     const [textMessage, setTextMessage] = useState('');
 
     const foreignerMessages = useForeignerEvents<Message>(setMessages);
 
     const eventHandlers: PeerToPeerHandlers = {
         onConnectionReady: () => setConnectionReady(true),
-        onLocalDataReady: (peerData) => setLocalData(JSON.stringify(peerData)),
         onMessageReceived: (message) =>
             foreignerMessages.registerEvent({ sender: 'They', text: message }),
     };
 
-    const startSessionHandler = () => {
+    const startConnection = async () => {
         const nextPeerToPeerConnection = new PeerToPeerMessaging(eventHandlers);
         setPeerMode(PeerMode.starter);
         setPeerToPeerMessaging(nextPeerToPeerConnection);
 
-        nextPeerToPeerConnection.startSession();
+        const peerData = await nextPeerToPeerConnection.startConnection();
+        setLocalPeerData(JSON.stringify(peerData));
     };
 
-    const joinSessionHandler = (data: string) => {
+    const copyConnectionLink = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.append(remoteDataParameterName, compressRemoteData(localPeerData));
+        navigator.clipboard.writeText(url.toString());
+    };
+
+    const joinConnection = async (data: string) => {
         const nextPeerToPeerConnection = new PeerToPeerMessaging(eventHandlers);
         setPeerMode(PeerMode.joiner);
         setPeerToPeerMessaging(nextPeerToPeerConnection);
 
         const parsedData: PeerData = JSON.parse(data);
-        nextPeerToPeerConnection.joinSession(parsedData);
+        const peerData = await nextPeerToPeerConnection.joinConnection(parsedData);
+        setLocalPeerData(JSON.stringify(peerData));
+    };
+
+    const copyVerificationCode = () => {
+        navigator.clipboard.writeText(compressRemoteData(localPeerData));
     };
 
     const scanQrHandler = async () => {
-        await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
             video: true,
         });
 
         const qrScanner = new QrScanner(
             videoRef.current!,
             (result) => {
-                const parsedData: PeerData = JSON.parse(decompressRemoteData(result.data));
-                peerToPeerMessaging?.establishConnection(parsedData);
-
+                setRemotePeerData(result.data);
                 qrScanner.stop();
+                stream.getTracks().forEach((t) => t.stop());
             },
             {},
         );
 
         qrScanner.start();
+    };
+
+    const completeConnection = (data: string) => {
+        const parsedData: PeerData = JSON.parse(decompressRemoteData(data));
+        peerToPeerMessaging?.completeConnection(parsedData);
     };
 
     const videoRef = useRef(null);
@@ -81,7 +97,8 @@ function App() {
         const params = new URL(document.location.toString()).searchParams;
         const data = params.get(remoteDataParameterName);
         if (data) {
-            joinSessionHandler(decompressRemoteData(data));
+            setRemotePeerData(data);
+            joinConnection(decompressRemoteData(data));
         }
     }, []);
 
@@ -89,10 +106,11 @@ function App() {
 
     function reset() {
         setConnectionReady(false);
-        setLocalData('');
+        setLocalPeerData('');
         setMessages([]);
         setPeerMode(undefined);
         setPeerToPeerMessaging(undefined);
+        setRemotePeerData('');
         setTextMessage('');
     }
 
@@ -140,40 +158,52 @@ function App() {
                 </React.Fragment>
             ) : (
                 <React.Fragment>
-                    {peerMode !== PeerMode.joiner && !localData && (
+                    {peerMode !== PeerMode.joiner && !localPeerData && (
                         <p>
-                            <button onClick={startSessionHandler}>Start session</button>
+                            <button onClick={startConnection}>Start connection</button>
                         </p>
                     )}
 
-                    {localData &&
+                    {localPeerData &&
                         (peerMode === PeerMode.joiner ? (
-                            <QRCode
-                                value={compressRemoteData(localData)}
-                                size={0.9 * Math.min(window.innerHeight, window.innerWidth)}
-                                style={{ width: '100%' }}
-                            />
+                            <div>
+                                <button onClick={copyVerificationCode} type="button">
+                                    Copy verification code
+                                </button>
+                                <QRCode
+                                    value={compressRemoteData(localPeerData)}
+                                    size={0.9 * Math.min(window.innerHeight, window.innerWidth)}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
                         ) : (
                             <div>
                                 <p>
-                                    <button
-                                        onClick={() => {
-                                            const url = new URL(window.location.href);
-                                            console.log(compressRemoteData(localData));
-                                            url.searchParams.append(
-                                                remoteDataParameterName,
-                                                compressRemoteData(localData),
-                                            );
-                                            navigator.clipboard.writeText(url.toString());
-                                        }}
-                                        type="button"
-                                    >
-                                        Copy session link
+                                    <button onClick={copyConnectionLink} type="button">
+                                        Copy connection link
                                     </button>
                                 </p>
                                 <p>
+                                    Verification code
+                                    <textarea
+                                        onChange={(event) => {
+                                            setRemotePeerData(event.target.value);
+                                        }}
+                                        rows={3}
+                                        style={{ marginBottom: 16, width: '100%' }}
+                                        value={remotePeerData}
+                                    ></textarea>
                                     <button onClick={scanQrHandler} type="button">
                                         Scan QR
+                                    </button>
+                                </p>
+                                <p>
+                                    <button
+                                        onClick={() => completeConnection(remotePeerData)}
+                                        type="button"
+                                        disabled={!remotePeerData}
+                                    >
+                                        Complete connection
                                     </button>
                                 </p>
 
