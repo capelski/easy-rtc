@@ -21,16 +21,7 @@ function App() {
     const foreignerMessages = useForeignerEvents<Message>(setMessages);
     foreignerMessages.processEvents(messages);
 
-    const {
-        closeConnection,
-        completeConnection,
-        joinConnection,
-        sendMessage,
-        startConnection,
-        connectionReady,
-        localPeerData,
-        peerMode,
-    } = usePeerToPeerMessaging(
+    const messaging = usePeerToPeerMessaging(
         (message) => foreignerMessages.registerEvent({ sender: 'They', text: message }),
         { useCompression: true },
     );
@@ -38,17 +29,17 @@ function App() {
     const videoRef = useRef(null);
 
     const copyConnectionCode = () => {
-        navigator.clipboard.writeText(localPeerData);
+        navigator.clipboard.writeText(messaging.localPeerData);
     };
 
     const copyConnectionLink = () => {
         const url = new URL(window.location.href);
-        url.searchParams.append(remoteDataParameterName, localPeerData);
+        url.searchParams.append(remoteDataParameterName, messaging.localPeerData);
         navigator.clipboard.writeText(url.toString());
     };
 
     const copyVerificationCode = () => {
-        navigator.clipboard.writeText(localPeerData);
+        navigator.clipboard.writeText(messaging.localPeerData);
     };
 
     const scanQrHandler = async () => {
@@ -79,7 +70,7 @@ function App() {
 
     return (
         <div>
-            {connectionReady ? (
+            {messaging.connectionReady ? (
                 <React.Fragment>
                     <p>
                         <span>Messages</span>
@@ -94,7 +85,7 @@ function App() {
                         <button
                             onClick={() => {
                                 setMessages([...messages, { sender: 'You', text: textMessage }]);
-                                sendMessage(textMessage);
+                                messaging.sendMessage(textMessage);
                                 setTextMessage('');
                             }}
                         >
@@ -111,7 +102,7 @@ function App() {
                     <p>
                         <button
                             onClick={() => {
-                                closeConnection();
+                                messaging.closeConnection();
                                 setDisplayQRCode(false);
                                 setMessages([]);
                                 setRemotePeerData('');
@@ -124,10 +115,12 @@ function App() {
                 </React.Fragment>
             ) : (
                 <React.Fragment>
-                    {!peerMode ? (
+                    {!messaging.peerMode ? (
                         <div>
                             <p>
-                                <button onClick={startConnection}>Start connection</button>
+                                <button onClick={messaging.startConnection}>
+                                    Start connection
+                                </button>
                             </p>
                             <hr />
                             <p>Connection code</p>
@@ -142,22 +135,22 @@ function App() {
                             <p>
                                 <button
                                     disabled={!remotePeerData}
-                                    onClick={() => joinConnection(remotePeerData)}
+                                    onClick={() => messaging.joinConnection(remotePeerData)}
                                 >
                                     Join connection
                                 </button>
                             </p>
                         </div>
-                    ) : !localPeerData ? (
+                    ) : !messaging.localPeerData ? (
                         <p>Processing...</p>
-                    ) : peerMode === PeerMode.starter ? (
+                    ) : messaging.peerMode === PeerMode.starter ? (
                         <div>
                             <p>Connection code</p>
                             <textarea
                                 disabled={true}
                                 rows={3}
                                 style={{ width: '100%' }}
-                                value={localPeerData}
+                                value={messaging.localPeerData}
                             ></textarea>
                             <p>
                                 <button onClick={copyConnectionCode} type="button">
@@ -178,7 +171,7 @@ function App() {
                             ></textarea>
                             <p>
                                 <button
-                                    onClick={() => completeConnection(remotePeerData)}
+                                    onClick={() => messaging.completeConnection(remotePeerData)}
                                     type="button"
                                     disabled={!remotePeerData}
                                 >
@@ -197,7 +190,7 @@ function App() {
                                 disabled={true}
                                 rows={3}
                                 style={{ width: '100%' }}
-                                value={localPeerData}
+                                value={messaging.localPeerData}
                             ></textarea>
                             <p>
                                 <button onClick={copyVerificationCode} type="button">
@@ -213,7 +206,7 @@ function App() {
                             </p>
                             {displayQRCode && (
                                 <QRCode
-                                    value={localPeerData}
+                                    value={messaging.localPeerData}
                                     size={0.9 * Math.min(window.innerHeight, window.innerWidth)}
                                     style={{ width: '100%' }}
                                 />
