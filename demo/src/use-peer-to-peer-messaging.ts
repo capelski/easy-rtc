@@ -14,14 +14,12 @@ export const usePeerToPeerMessaging = (
     const [localPeerData, setLocalPeerData] = useState('');
     const [peerMode, setPeerMode] = useState<PeerMode>();
     const [connection, setConnection] = useState<PeerToPeerMessaging>();
-    const [remotePeerData, setRemotePeerData] = useState('');
 
     const reset = () => {
         setConnectionReady(false);
         setLocalPeerData('');
         setPeerMode(undefined);
         setConnection(undefined);
-        setRemotePeerData('');
     };
 
     const handlers: PeerToPeerHandlers = {
@@ -39,7 +37,7 @@ export const usePeerToPeerMessaging = (
         setLocalPeerData(nextLocalPeerData);
     };
 
-    const joinConnection = async () => {
+    const joinConnection = async (remotePeerData: string) => {
         const nextPeerToPeerConnection = new PeerToPeerMessaging(handlers, { useCompression });
         setPeerMode(PeerMode.joiner);
         setConnection(nextPeerToPeerConnection);
@@ -48,7 +46,7 @@ export const usePeerToPeerMessaging = (
         setLocalPeerData(nextLocalPeerData);
     };
 
-    const completeConnection = () => {
+    const completeConnection = (remotePeerData: string) => {
         connection?.completeConnection(remotePeerData);
     };
 
@@ -67,14 +65,12 @@ export const usePeerToPeerMessaging = (
             completeConnection,
             joinConnection,
             sendMessage,
-            setRemotePeerData,
             startConnection,
         },
         state: {
             connectionReady,
             localPeerData,
             peerMode,
-            remotePeerData,
         },
     };
 };

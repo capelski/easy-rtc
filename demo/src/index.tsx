@@ -15,6 +15,7 @@ interface Message {
 function App() {
     const [displayQRCode, setDisplayQRCode] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
+    const [remotePeerData, setRemotePeerData] = useState('');
     const [textMessage, setTextMessage] = useState('');
 
     const foreignerMessages = useForeignerEvents<Message>(setMessages);
@@ -26,10 +27,9 @@ function App() {
             completeConnection,
             joinConnection,
             sendMessage,
-            setRemotePeerData,
             startConnection,
         },
-        state: { connectionReady, localPeerData, peerMode, remotePeerData },
+        state: { connectionReady, localPeerData, peerMode },
     } = usePeerToPeerMessaging(
         (message) => foreignerMessages.registerEvent({ sender: 'They', text: message }),
         { useCompression: true },
@@ -114,6 +114,7 @@ function App() {
                                 closeConnection();
                                 setDisplayQRCode(false);
                                 setMessages([]);
+                                setRemotePeerData('');
                                 setTextMessage('');
                             }}
                         >
@@ -139,7 +140,10 @@ function App() {
                                 value={remotePeerData}
                             ></textarea>
                             <p>
-                                <button disabled={!remotePeerData} onClick={joinConnection}>
+                                <button
+                                    disabled={!remotePeerData}
+                                    onClick={() => joinConnection(remotePeerData)}
+                                >
                                     Join connection
                                 </button>
                             </p>
@@ -174,7 +178,7 @@ function App() {
                             ></textarea>
                             <p>
                                 <button
-                                    onClick={completeConnection}
+                                    onClick={() => completeConnection(remotePeerData)}
                                     type="button"
                                     disabled={!remotePeerData}
                                 >
