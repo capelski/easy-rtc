@@ -7,13 +7,11 @@ export enum PeerMode {
 }
 
 export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
-    const [connectionReady, setConnectionReady] = useState(false);
     const [localPeerData, setLocalPeerData] = useState('');
     const [peerMode, setPeerMode] = useState<PeerMode>();
     const [connection, setConnection] = useState<PeerToPeerMessaging>();
 
     const reset = () => {
-        setConnectionReady(false);
         setLocalPeerData('');
         setPeerMode(undefined);
         setConnection(undefined);
@@ -24,10 +22,6 @@ export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
         onConnectionClosed: () => {
             reset();
             params.onConnectionClosed?.();
-        },
-        onConnectionReady: () => {
-            setConnectionReady(true);
-            params.onConnectionReady?.();
         },
     };
 
@@ -70,7 +64,6 @@ export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
         sendMessage,
         startConnection,
         // State
-        connectionReady,
         localPeerData,
         peerMode,
     };

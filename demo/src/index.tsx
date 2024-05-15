@@ -13,6 +13,7 @@ interface Message {
 }
 
 function App() {
+    const [connectionReady, setConnectionReady] = useState(false);
     const [displayQRCode, setDisplayQRCode] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [remotePeerData, setRemotePeerData] = useState('');
@@ -22,6 +23,7 @@ function App() {
     foreignerMessages.processEvents(messages);
 
     const reset = () => {
+        setConnectionReady(false);
         setDisplayQRCode(false);
         setMessages([]);
         setRemotePeerData('');
@@ -30,6 +32,7 @@ function App() {
 
     const messaging = usePeerToPeerMessaging({
         onConnectionClosed: reset,
+        onConnectionReady: () => setConnectionReady(true),
         onMessageReceived: (message) =>
             foreignerMessages.registerEvent({ sender: 'They', text: message }),
         useCompression: true,
@@ -79,7 +82,7 @@ function App() {
 
     return (
         <div>
-            {messaging.connectionReady ? (
+            {connectionReady ? (
                 <React.Fragment>
                     <p>
                         <span>Messages</span>
