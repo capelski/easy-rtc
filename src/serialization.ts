@@ -1,4 +1,7 @@
-import { PeerData } from '../../src/peer-to-peer-messaging';
+export type PeerData = {
+    candidates: RTCIceCandidateInit[];
+    session: RTCSessionDescriptionInit;
+};
 
 const compressionTransformations = [
     ['\\r\\na=extmap-allow-mixed', '_a'],
@@ -40,16 +43,20 @@ const compressionTransformations = [
     ['\\', '_Z'],
 ];
 
-export const deserializePeerData = (data: string): PeerData => {
-    return JSON.parse(
-        compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
-            return reduced.replaceAll(symbol, text);
-        }, data),
-    );
+export const deserializePeerData = (peerData: string, decompress = false): PeerData => {
+    const source = decompress
+        ? compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
+              return reduced.replaceAll(symbol, text);
+          }, peerData)
+        : peerData;
+    return JSON.parse(source);
 };
 
-export const serializePeerData = (peerData: PeerData): string => {
-    return compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
-        return reduced.replaceAll(text, symbol);
-    }, JSON.stringify(peerData));
+export const serializePeerData = (peerData: PeerData, compress = false): string => {
+    const source = JSON.stringify(peerData);
+    return compress
+        ? compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
+              return reduced.replaceAll(text, symbol);
+          }, source)
+        : source;
 };

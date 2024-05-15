@@ -1,7 +1,4 @@
-export type PeerData = {
-    c: RTCIceCandidateInit[];
-    s: RTCSessionDescriptionInit;
-};
+import { deserializePeerData, serializePeerData } from './serialization';
 
 export interface PeerToPeerHandlers {
     onConnectionClosed?: () => void;
@@ -12,14 +9,20 @@ export interface PeerToPeerHandlers {
 export class PeerToPeerMessaging {
     protected readonly rtcConnection: RTCPeerConnection = new RTCPeerConnection();
     protected readonly localIceCandidates: RTCIceCandidate[] = [];
+    protected readonly useCompression: boolean = false;
 
     protected session: RTCSessionDescriptionInit | undefined;
     protected dataChannel: RTCDataChannel | undefined;
 
     protected peerDataReadyTimeout: number | undefined;
-    protected peerDataResolver: ((peerData: PeerData) => void) | undefined;
+    protected peerDataResolver: ((peerData: string) => void) | undefined;
 
-    constructor(protected handlers: PeerToPeerHandlers) {
+    constructor(
+        protected readonly handlers: PeerToPeerHandlers,
+        { useCompression }: { useCompression?: boolean } = {},
+    ) {
+        this.useCompression = useCompression ?? false;
+
         this.rtcConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 this.localIceCandidates.push(event.candidate);
@@ -28,7 +31,12 @@ export class PeerToPeerMessaging {
                     clearTimeout(this.peerDataReadyTimeout);
                 }
                 this.peerDataReadyTimeout = window.setTimeout(() => {
-                    this.peerDataResolver!({ c: this.localIceCandidates, s: this.session! });
+                    this.peerDataResolver!(
+                        serializePeerData(
+                            { candidates: this.localIceCandidates, session: this.session! },
+                            this.useCompression,
+                        ),
+                    );
                 }, 300);
             }
         };
@@ -58,20 +66,22 @@ export class PeerToPeerMessaging {
     }
 
     /** Completes the connection and calls onConnectionReady when done */
-    completeConnection(remoteData: PeerData) {
-        this.rtcConnection.setRemoteDescription(remoteData.s);
+    completeConnection(remoteData: string) {
+        const remotePeerData = deserializePeerData(remoteData, this.useCompression);
+        this.rtcConnection.setRemoteDescription(remotePeerData.session);
     }
 
     /** Joins the connection defined by remoteData and returns the data needed by
      * the other peer to complete the connection */
-    async joinConnection(remoteData: PeerData) {
-        await this.rtcConnection.setRemoteDescription(remoteData.s);
+    async joinConnection(remoteData: string) {
+        const remotePeerData = deserializePeerData(remoteData, this.useCompression);
+        await this.rtcConnection.setRemoteDescription(remotePeerData.session);
 
-        for (const candidate of remoteData.c) {
+        for (const candidate of remotePeerData.candidates) {
             await this.rtcConnection.addIceCandidate(candidate);
         }
 
-        const connectionPromise = new Promise<PeerData>((resolve) => {
+        const connectionPromise = new Promise<string>((resolve) => {
             this.peerDataResolver = resolve;
         });
 
@@ -96,7 +106,7 @@ export class PeerToPeerMessaging {
         const dataChannel = this.rtcConnection.createDataChannel('data-channel');
         this.setDataChannelHandlers(dataChannel);
 
-        const connectionPromise = new Promise<PeerData>((resolve) => {
+        const connectionPromise = new Promise<string>((resolve) => {
             this.peerDataResolver = resolve;
         });
 

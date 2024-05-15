@@ -2,9 +2,8 @@ import QrScanner from 'qr-scanner';
 import React, { useEffect, useRef, useState } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import QRCode from 'react-qr-code';
-import { PeerToPeerHandlers, PeerToPeerMessaging } from '../../src/peer-to-peer-messaging';
-import { deserializePeerData, serializePeerData } from './serialization';
 import { useForeignerEvents } from './use-foreigner-events';
+import { PeerMode, usePeerToPeerMessaging } from './use-peer-to-peer-messaging';
 
 export const remoteDataParameterName = 'd';
 
@@ -13,38 +12,30 @@ interface Message {
     text: string;
 }
 
-enum PeerMode {
-    joiner = 'joiner',
-    starter = 'starter',
-}
-
 function App() {
-    const [connectionReady, setConnectionReady] = useState(false);
     const [displayQRCode, setDisplayQRCode] = useState(false);
-    const [localPeerData, setLocalPeerData] = useState('');
     const [messages, setMessages] = useState<Message[]>([]);
-    const [peerMode, setPeerMode] = useState<PeerMode>();
-    const [peerToPeerMessaging, setPeerToPeerMessaging] = useState<PeerToPeerMessaging>();
-    const [remotePeerData, setRemotePeerData] = useState('');
     const [textMessage, setTextMessage] = useState('');
 
     const foreignerMessages = useForeignerEvents<Message>(setMessages);
+    foreignerMessages.processEvents(messages);
 
-    const eventHandlers: PeerToPeerHandlers = {
-        onConnectionClosed: reset,
-        onConnectionReady: () => setConnectionReady(true),
-        onMessageReceived: (message) =>
-            foreignerMessages.registerEvent({ sender: 'They', text: message }),
-    };
+    const {
+        handlers: {
+            closeConnection,
+            completeConnection,
+            joinConnection,
+            sendMessage,
+            setRemotePeerData,
+            startConnection,
+        },
+        state: { connectionReady, localPeerData, peerMode, remotePeerData },
+    } = usePeerToPeerMessaging(
+        (message) => foreignerMessages.registerEvent({ sender: 'They', text: message }),
+        { useCompression: true },
+    );
 
-    const startConnection = async () => {
-        const nextPeerToPeerConnection = new PeerToPeerMessaging(eventHandlers);
-        setPeerMode(PeerMode.starter);
-        setPeerToPeerMessaging(nextPeerToPeerConnection);
-
-        const peerData = await nextPeerToPeerConnection.startConnection();
-        setLocalPeerData(serializePeerData(peerData));
-    };
+    const videoRef = useRef(null);
 
     const copyConnectionCode = () => {
         navigator.clipboard.writeText(localPeerData);
@@ -54,17 +45,6 @@ function App() {
         const url = new URL(window.location.href);
         url.searchParams.append(remoteDataParameterName, localPeerData);
         navigator.clipboard.writeText(url.toString());
-    };
-
-    const joinConnection = async () => {
-        const nextPeerToPeerConnection = new PeerToPeerMessaging(eventHandlers);
-        setPeerMode(PeerMode.joiner);
-        setPeerToPeerMessaging(nextPeerToPeerConnection);
-
-        const peerData = await nextPeerToPeerConnection.joinConnection(
-            deserializePeerData(remotePeerData),
-        );
-        setLocalPeerData(serializePeerData(peerData));
     };
 
     const copyVerificationCode = () => {
@@ -89,12 +69,6 @@ function App() {
         qrScanner.start();
     };
 
-    const completeConnection = () => {
-        peerToPeerMessaging?.completeConnection(deserializePeerData(remotePeerData));
-    };
-
-    const videoRef = useRef(null);
-
     useEffect(() => {
         const params = new URL(document.location.toString()).searchParams;
         const data = params.get(remoteDataParameterName);
@@ -102,19 +76,6 @@ function App() {
             setRemotePeerData(data);
         }
     }, []);
-
-    foreignerMessages.processEvents(messages);
-
-    function reset() {
-        setConnectionReady(false);
-        setDisplayQRCode(false);
-        setLocalPeerData('');
-        setMessages([]);
-        setPeerMode(undefined);
-        setPeerToPeerMessaging(undefined);
-        setRemotePeerData('');
-        setTextMessage('');
-    }
 
     return (
         <div>
@@ -133,8 +94,8 @@ function App() {
                         <button
                             onClick={() => {
                                 setMessages([...messages, { sender: 'You', text: textMessage }]);
+                                sendMessage(textMessage);
                                 setTextMessage('');
-                                peerToPeerMessaging?.send(textMessage);
                             }}
                         >
                             Send
@@ -150,8 +111,10 @@ function App() {
                     <p>
                         <button
                             onClick={() => {
-                                peerToPeerMessaging?.closeConnection();
-                                reset();
+                                closeConnection();
+                                setDisplayQRCode(false);
+                                setMessages([]);
+                                setTextMessage('');
                             }}
                         >
                             Close connection
