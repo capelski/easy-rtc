@@ -22,14 +22,14 @@ function App() {
     foreignerMessages.processEvents(messages);
 
     const {
-        handlers: {
-            closeConnection,
-            completeConnection,
-            joinConnection,
-            sendMessage,
-            startConnection,
-        },
-        state: { connectionReady, localPeerData, peerMode },
+        closeConnection,
+        completeConnection,
+        joinConnection,
+        sendMessage,
+        startConnection,
+        connectionReady,
+        localPeerData,
+        peerMode,
     } = usePeerToPeerMessaging(
         (message) => foreignerMessages.registerEvent({ sender: 'They', text: message }),
         { useCompression: true },

@@ -60,17 +60,15 @@ export const usePeerToPeerMessaging = (
     };
 
     return {
-        handlers: {
-            closeConnection,
-            completeConnection,
-            joinConnection,
-            sendMessage,
-            startConnection,
-        },
-        state: {
-            connectionReady,
-            localPeerData,
-            peerMode,
-        },
+        // Handlers
+        closeConnection,
+        completeConnection,
+        joinConnection,
+        sendMessage,
+        startConnection,
+        // State
+        connectionReady,
+        localPeerData,
+        peerMode,
     };
 };
