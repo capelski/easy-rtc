@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { PeerToPeerHandlers, PeerToPeerMessaging } from '../../src/peer-to-peer-messaging';
+import { PeerToPeerMessaging, PeerToPeerParameters } from '../../src/peer-to-peer-messaging';
 
 export enum PeerMode {
     joiner = 'joiner',
     starter = 'starter',
 }
 
-export const usePeerToPeerMessaging = (
-    onMessageReceived: PeerToPeerHandlers['onMessageReceived'],
-    { useCompression }: { useCompression?: boolean } = {},
-) => {
+export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
     const [connectionReady, setConnectionReady] = useState(false);
     const [localPeerData, setLocalPeerData] = useState('');
     const [peerMode, setPeerMode] = useState<PeerMode>();
@@ -22,14 +19,20 @@ export const usePeerToPeerMessaging = (
         setConnection(undefined);
     };
 
-    const handlers: PeerToPeerHandlers = {
-        onConnectionClosed: reset,
-        onConnectionReady: () => setConnectionReady(true),
-        onMessageReceived: onMessageReceived,
+    const extendedParams: PeerToPeerParameters = {
+        ...params,
+        onConnectionClosed: () => {
+            reset();
+            params.onConnectionClosed?.();
+        },
+        onConnectionReady: () => {
+            setConnectionReady(true);
+            params.onConnectionReady?.();
+        },
     };
 
     const startConnection = async () => {
-        const nextPeerToPeerConnection = new PeerToPeerMessaging(handlers, { useCompression });
+        const nextPeerToPeerConnection = new PeerToPeerMessaging(extendedParams);
         setPeerMode(PeerMode.starter);
         setConnection(nextPeerToPeerConnection);
 
@@ -38,7 +41,7 @@ export const usePeerToPeerMessaging = (
     };
 
     const joinConnection = async (remotePeerData: string) => {
-        const nextPeerToPeerConnection = new PeerToPeerMessaging(handlers, { useCompression });
+        const nextPeerToPeerConnection = new PeerToPeerMessaging(extendedParams);
         setPeerMode(PeerMode.joiner);
         setConnection(nextPeerToPeerConnection);
 

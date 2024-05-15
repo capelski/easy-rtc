@@ -1,15 +1,15 @@
 import { deserializePeerData, serializePeerData } from './serialization';
 
-export interface PeerToPeerHandlers {
+export interface PeerToPeerParameters {
     onConnectionClosed?: () => void;
     onConnectionReady?: () => void;
     onMessageReceived: (message: string) => void;
+    useCompression?: boolean;
 }
 
 export class PeerToPeerMessaging {
     protected readonly rtcConnection: RTCPeerConnection = new RTCPeerConnection();
     protected readonly localIceCandidates: RTCIceCandidate[] = [];
-    protected readonly useCompression: boolean = false;
 
     protected session: RTCSessionDescriptionInit | undefined;
     protected dataChannel: RTCDataChannel | undefined;
@@ -17,12 +17,7 @@ export class PeerToPeerMessaging {
     protected peerDataReadyTimeout: number | undefined;
     protected peerDataResolver: ((peerData: string) => void) | undefined;
 
-    constructor(
-        protected readonly handlers: PeerToPeerHandlers,
-        { useCompression }: { useCompression?: boolean } = {},
-    ) {
-        this.useCompression = useCompression ?? false;
-
+    constructor(protected readonly params: PeerToPeerParameters) {
         this.rtcConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 this.localIceCandidates.push(event.candidate);
@@ -34,7 +29,7 @@ export class PeerToPeerMessaging {
                     this.peerDataResolver!(
                         serializePeerData(
                             { candidates: this.localIceCandidates, session: this.session! },
-                            this.useCompression,
+                            this.params.useCompression,
                         ),
                     );
                 }, 300);
@@ -49,14 +44,14 @@ export class PeerToPeerMessaging {
         this.rtcConnection.onconnectionstatechange = () => {
             if (
                 this.rtcConnection.connectionState === 'connected' &&
-                this.handlers.onConnectionReady
+                this.params.onConnectionReady
             ) {
-                this.handlers.onConnectionReady();
+                this.params.onConnectionReady();
             } else if (
                 this.rtcConnection.connectionState === 'disconnected' &&
-                this.handlers.onConnectionClosed
+                this.params.onConnectionClosed
             ) {
-                this.handlers.onConnectionClosed();
+                this.params.onConnectionClosed();
             }
         };
     }
@@ -67,14 +62,14 @@ export class PeerToPeerMessaging {
 
     /** Completes the connection and calls onConnectionReady when done */
     completeConnection(remoteData: string) {
-        const remotePeerData = deserializePeerData(remoteData, this.useCompression);
+        const remotePeerData = deserializePeerData(remoteData, this.params.useCompression);
         this.rtcConnection.setRemoteDescription(remotePeerData.session);
     }
 
     /** Joins the connection defined by remoteData and returns the data needed by
      * the other peer to complete the connection */
     async joinConnection(remoteData: string) {
-        const remotePeerData = deserializePeerData(remoteData, this.useCompression);
+        const remotePeerData = deserializePeerData(remoteData, this.params.useCompression);
         await this.rtcConnection.setRemoteDescription(remotePeerData.session);
 
         for (const candidate of remotePeerData.candidates) {
@@ -123,7 +118,7 @@ export class PeerToPeerMessaging {
         };
 
         dataChannel.onmessage = (event) => {
-            this.handlers.onMessageReceived(event.data);
+            this.params.onMessageReceived(event.data);
         };
 
         dataChannel.onclose = () => {

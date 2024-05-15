@@ -21,10 +21,19 @@ function App() {
     const foreignerMessages = useForeignerEvents<Message>(setMessages);
     foreignerMessages.processEvents(messages);
 
-    const messaging = usePeerToPeerMessaging(
-        (message) => foreignerMessages.registerEvent({ sender: 'They', text: message }),
-        { useCompression: true },
-    );
+    const reset = () => {
+        setDisplayQRCode(false);
+        setMessages([]);
+        setRemotePeerData('');
+        setTextMessage('');
+    };
+
+    const messaging = usePeerToPeerMessaging({
+        onConnectionClosed: reset,
+        onMessageReceived: (message) =>
+            foreignerMessages.registerEvent({ sender: 'They', text: message }),
+        useCompression: true,
+    });
 
     const videoRef = useRef(null);
 
@@ -103,10 +112,7 @@ function App() {
                         <button
                             onClick={() => {
                                 messaging.closeConnection();
-                                setDisplayQRCode(false);
-                                setMessages([]);
-                                setRemotePeerData('');
-                                setTextMessage('');
+                                reset();
                             }}
                         >
                             Close connection
