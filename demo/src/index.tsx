@@ -84,47 +84,7 @@ function App() {
 
     return (
         <div>
-            {connectionReady ? (
-                <React.Fragment>
-                    <p>
-                        <span>Messages</span>
-                        <textarea
-                            onChange={(event) => {
-                                setTextMessage(event.target.value);
-                            }}
-                            rows={3}
-                            style={{ marginBottom: 16, width: '100%' }}
-                            value={textMessage}
-                        ></textarea>
-                        <button
-                            onClick={() => {
-                                setMessages([...messages, { sender: 'You', text: textMessage }]);
-                                messaging.sendMessage(textMessage);
-                                setTextMessage('');
-                            }}
-                        >
-                            Send
-                        </button>
-                    </p>
-                    <div>
-                        {messages.map((message, index) => (
-                            <p key={`message-${index}`}>
-                                {message.sender}: {message.text}
-                            </p>
-                        ))}
-                    </div>
-                    <p>
-                        <button
-                            onClick={() => {
-                                messaging.closeConnection();
-                                reset();
-                            }}
-                        >
-                            Close connection
-                        </button>
-                    </p>
-                </React.Fragment>
-            ) : (
+            {!connectionReady ? (
                 <React.Fragment>
                     {!messaging.peerMode ? (
                         <div>
@@ -224,6 +184,46 @@ function App() {
                             )}
                         </div>
                     )}
+                </React.Fragment>
+            ) : (
+                <React.Fragment>
+                    <p>
+                        <span>Messages</span>
+                        <textarea
+                            onChange={(event) => {
+                                setTextMessage(event.target.value);
+                            }}
+                            rows={3}
+                            style={{ marginBottom: 16, width: '100%' }}
+                            value={textMessage}
+                        ></textarea>
+                        <button
+                            onClick={() => {
+                                setMessages([...messages, { sender: 'You', text: textMessage }]);
+                                messaging.sendMessage(textMessage);
+                                setTextMessage('');
+                            }}
+                        >
+                            Send
+                        </button>
+                    </p>
+                    <div>
+                        {messages.map((message, index) => (
+                            <p key={`message-${index}`}>
+                                {message.sender}: {message.text}
+                            </p>
+                        ))}
+                    </div>
+                    <p>
+                        <button
+                            onClick={() => {
+                                messaging.closeConnection();
+                                reset();
+                            }}
+                        >
+                            Close connection
+                        </button>
+                    </p>
                 </React.Fragment>
             )}
         </div>

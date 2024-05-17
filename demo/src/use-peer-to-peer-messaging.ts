@@ -1,60 +1,55 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PeerToPeerMessaging, PeerToPeerParameters } from '../../src/peer-to-peer-messaging';
-
-export enum PeerMode {
-    joiner = 'joiner',
-    starter = 'starter',
-}
+export { PeerMode, PeerToPeerParameters } from '../../src/peer-to-peer-messaging';
 
 export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
     const [localPeerData, setLocalPeerData] = useState('');
-    const [peerMode, setPeerMode] = useState<PeerMode>();
-    const [connection, setConnection] = useState<PeerToPeerMessaging>();
+    const [connection, setConnection] = useState<PeerToPeerMessaging>(
+        () => new PeerToPeerMessaging({ ...params }),
+    );
 
-    const reset = () => {
-        setLocalPeerData('');
-        setPeerMode(undefined);
-        setConnection(undefined);
-    };
+    const { closeConnection, completeConnection, joinConnection, sendMessage, startConnection } =
+        useMemo(() => {
+            const originalHandler = params.onConnectionClosed;
+            connection.params.onConnectionClosed = () => {
+                setLocalPeerData('');
+                originalHandler?.();
+                setTimeout(() => {
+                    setConnection(new PeerToPeerMessaging({ ...params }));
+                }, 0);
+            };
 
-    const extendedParams: PeerToPeerParameters = {
-        ...params,
-        onConnectionClosed: () => {
-            reset();
-            params.onConnectionClosed?.();
-        },
-    };
+            const startConnection = async () => {
+                const nextLocalPeerData = await connection.startConnection();
+                setLocalPeerData(nextLocalPeerData);
+            };
 
-    const startConnection = async () => {
-        const nextPeerToPeerConnection = new PeerToPeerMessaging(extendedParams);
-        setPeerMode(PeerMode.starter);
-        setConnection(nextPeerToPeerConnection);
+            const joinConnection = async (remotePeerData: string) => {
+                const nextLocalPeerData = await connection.joinConnection(remotePeerData);
+                setLocalPeerData(nextLocalPeerData);
+            };
 
-        const nextLocalPeerData = await nextPeerToPeerConnection.startConnection();
-        setLocalPeerData(nextLocalPeerData);
-    };
+            const completeConnection = (remotePeerData: string) => {
+                connection.completeConnection(remotePeerData);
+            };
 
-    const joinConnection = async (remotePeerData: string) => {
-        const nextPeerToPeerConnection = new PeerToPeerMessaging(extendedParams);
-        setPeerMode(PeerMode.joiner);
-        setConnection(nextPeerToPeerConnection);
+            const sendMessage = (message: string) => {
+                connection.send(message);
+            };
 
-        const nextLocalPeerData = await nextPeerToPeerConnection.joinConnection(remotePeerData);
-        setLocalPeerData(nextLocalPeerData);
-    };
+            const closeConnection = () => {
+                connection.closeConnection();
+            };
 
-    const completeConnection = (remotePeerData: string) => {
-        connection?.completeConnection(remotePeerData);
-    };
-
-    const sendMessage = (message: string) => {
-        connection?.send(message);
-    };
-
-    const closeConnection = () => {
-        connection?.closeConnection();
-        reset();
-    };
+            return {
+                connection,
+                closeConnection,
+                completeConnection,
+                joinConnection,
+                sendMessage,
+                startConnection,
+            };
+        }, [connection]);
 
     return {
         // Handlers
@@ -65,6 +60,6 @@ export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
         startConnection,
         // State
         localPeerData,
-        peerMode,
+        peerMode: connection.peerMode,
     };
 };

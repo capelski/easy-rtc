@@ -2,9 +2,14 @@ import { deserializePeerData, serializePeerData } from './serialization';
 
 export interface PeerToPeerParameters {
     onConnectionClosed?: () => void;
-    onConnectionReady?: () => void;
-    onMessageReceived: (message: string) => void;
+    onConnectionReady?: (instance: PeerToPeerMessaging) => void;
+    onMessageReceived: (message: string, instance: PeerToPeerMessaging) => void;
     useCompression?: boolean;
+}
+
+export enum PeerMode {
+    joiner = 'joiner',
+    starter = 'starter',
 }
 
 export class PeerToPeerMessaging {
@@ -17,7 +22,12 @@ export class PeerToPeerMessaging {
     protected peerDataReadyTimeout: number | undefined;
     protected peerDataResolver: ((peerData: string) => void) | undefined;
 
-    constructor(protected readonly params: PeerToPeerParameters) {
+    protected _peerMode: PeerMode | undefined;
+    get peerMode() {
+        return this._peerMode;
+    }
+
+    constructor(public readonly params: PeerToPeerParameters) {
         this.rtcConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 this.localIceCandidates.push(event.candidate);
@@ -43,11 +53,6 @@ export class PeerToPeerMessaging {
 
         this.rtcConnection.onconnectionstatechange = () => {
             if (
-                this.rtcConnection.connectionState === 'connected' &&
-                this.params.onConnectionReady
-            ) {
-                this.params.onConnectionReady();
-            } else if (
                 this.rtcConnection.connectionState === 'disconnected' &&
                 this.params.onConnectionClosed
             ) {
@@ -56,8 +61,10 @@ export class PeerToPeerMessaging {
         };
     }
 
+    /** Closes the connection and calls onConnectionClosed when done */
     closeConnection() {
         this.rtcConnection.close();
+        this.params.onConnectionClosed?.();
     }
 
     /** Completes the connection and calls onConnectionReady when done */
@@ -69,6 +76,8 @@ export class PeerToPeerMessaging {
     /** Joins the connection defined by remoteData and returns the data needed by
      * the other peer to complete the connection */
     async joinConnection(remoteData: string) {
+        this._peerMode = PeerMode.joiner;
+
         const remotePeerData = deserializePeerData(remoteData, this.params.useCompression);
         await this.rtcConnection.setRemoteDescription(remotePeerData.session);
 
@@ -98,6 +107,8 @@ export class PeerToPeerMessaging {
 
     /** Starts a connection and returns the data needed by the other peer to join the connection */
     async startConnection() {
+        this._peerMode = PeerMode.starter;
+
         const dataChannel = this.rtcConnection.createDataChannel('data-channel');
         this.setDataChannelHandlers(dataChannel);
 
@@ -115,10 +126,13 @@ export class PeerToPeerMessaging {
     private setDataChannelHandlers(dataChannel: RTCDataChannel) {
         dataChannel.onopen = () => {
             this.dataChannel = dataChannel;
+            if (this.params.onConnectionReady) {
+                this.params.onConnectionReady(this);
+            }
         };
 
         dataChannel.onmessage = (event) => {
-            this.params.onMessageReceived(event.data);
+            this.params.onMessageReceived(event.data, this);
         };
 
         dataChannel.onclose = () => {
