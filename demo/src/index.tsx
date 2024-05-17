@@ -19,8 +19,10 @@ function App() {
     const [remotePeerData, setRemotePeerData] = useState('');
     const [textMessage, setTextMessage] = useState('');
 
-    const foreignerMessages = useForeignerEvents<Message>(setMessages);
-    foreignerMessages.processEvents(messages);
+    const foreignerMessages = useForeignerEvents<Message>();
+    foreignerMessages.processNextEvent((message) => {
+        setMessages([...messages, message]);
+    });
 
     const reset = () => {
         setConnectionReady(false);

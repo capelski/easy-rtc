@@ -8,22 +8,21 @@ import { useEffect, useMemo, useState } from 'react';
  * Instead of processing each event in the event handler itself, force a new render cycle and
  * process the state via useEffect, where the latest state is available.
  */
-export function useForeignerEvents<T>(setter: (data: T[]) => void) {
+export function useForeignerEvents<TEventData>() {
     const [, forceUpdate] = useState({});
 
     return useMemo(() => {
-        const pendingEvents: T[] = [];
+        const pendingEvents: TEventData[] = [];
 
         return {
-            registerEvent: (stateUpdate: T) => {
-                pendingEvents.push(stateUpdate);
+            registerEvent: (eventData: TEventData) => {
+                pendingEvents.push(eventData);
                 forceUpdate({});
             },
-            processEvents: (currentState: T[]) => {
+            processNextEvent: (handler: (c: TEventData) => void) => {
                 useEffect(() => {
                     if (pendingEvents.length > 0) {
-                        const nextUpdate = pendingEvents.shift()!;
-                        setter([...currentState, nextUpdate]);
+                        handler(pendingEvents.shift()!);
                     }
                 }, [pendingEvents.length]);
             },
