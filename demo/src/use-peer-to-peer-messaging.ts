@@ -1,12 +1,18 @@
 import { useMemo, useState } from 'react';
-import { PeerToPeerMessaging, PeerToPeerParameters } from '../../src/peer-to-peer-messaging';
-export { PeerMode, PeerToPeerParameters } from '../../src/peer-to-peer-messaging';
+import {
+    PeerMode,
+    PeerToPeerMessaging,
+    PeerToPeerParameters,
+} from '../../src/peer-to-peer-messaging';
+
+export { PeerMode, PeerToPeerParameters };
 
 export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
-    const [localPeerData, setLocalPeerData] = useState('');
     const [connection, setConnection] = useState<PeerToPeerMessaging>(
         () => new PeerToPeerMessaging({ ...params }),
     );
+    const [localPeerData, setLocalPeerData] = useState('');
+    const [peerMode, setPeerMode] = useState<PeerMode>();
 
     const { closeConnection, completeConnection, joinConnection, sendMessage, startConnection } =
         useMemo(() => {
@@ -20,12 +26,17 @@ export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
             };
 
             const startConnection = async () => {
-                const nextLocalPeerData = await connection.startConnection();
+                const connectionPromise = connection.startConnection();
+                setPeerMode(connection.peerMode);
+                const nextLocalPeerData = await connectionPromise;
                 setLocalPeerData(nextLocalPeerData);
             };
 
             const joinConnection = async (remotePeerData: string) => {
-                const nextLocalPeerData = await connection.joinConnection(remotePeerData);
+                const connectionPromise = connection.joinConnection(remotePeerData);
+                setPeerMode(connection.peerMode);
+                const nextLocalPeerData = await connectionPromise;
+
                 setLocalPeerData(nextLocalPeerData);
             };
 
@@ -60,6 +71,6 @@ export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
         startConnection,
         // State
         localPeerData,
-        peerMode: connection.peerMode,
+        peerMode,
     };
 };
