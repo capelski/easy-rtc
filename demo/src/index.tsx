@@ -2,7 +2,7 @@ import QrScanner from 'qr-scanner';
 import React, { useEffect, useRef, useState } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import QRCode from 'react-qr-code';
-import { useForeignerEvents } from './use-foreigner-events';
+import { useExternalEvents } from './use-external-events';
 import { PeerMode, usePeerToPeerMessaging } from './use-peer-to-peer-messaging';
 
 export const remoteDataParameterName = 'd';
@@ -19,7 +19,7 @@ function App() {
     const [remotePeerData, setRemotePeerData] = useState('');
     const [textMessage, setTextMessage] = useState('');
 
-    const foreignerMessages = useForeignerEvents<Message>();
+    const foreignerMessages = useExternalEvents<Message>();
     foreignerMessages.processNextEvent((message) => {
         setMessages([...messages, message]);
     });

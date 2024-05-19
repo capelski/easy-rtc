@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
  * However, since the event handler is only registered once, the handler doesn't have access
  * to the latest state at the moment each event is processed.
  *
- * Instead of processing each event in the event handler itself, force a new render cycle and
- * process the state via useEffect, where the latest state is available.
+ * Instead of processing each event in the event handler itself, store the event, force a new
+ * render cycle and process the event via useEffect, where the latest state is available.
  */
-export function useForeignerEvents<TEventData>() {
+export function useExternalEvents<TEventData>() {
     const [, forceUpdate] = useState({});
 
     return useMemo(() => {
