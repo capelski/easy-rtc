@@ -79,6 +79,7 @@ function App() {
         const data = params.get(remoteDataParameterName);
         if (data) {
             setRemotePeerData(data);
+            window.history.pushState({}, '', window.location.origin);
         }
     }, []);
 
