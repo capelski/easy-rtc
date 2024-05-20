@@ -36,7 +36,7 @@ function App() {
             onMessageReceived: (message) =>
                 foreignerMessages.registerEvent({ sender: 'They', text: message }),
         },
-        { useCompression: true },
+        { minification: true },
     );
 
     const videoRef = useRef(null);

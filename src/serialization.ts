@@ -43,8 +43,8 @@ const compressionTransformations = [
     ['\\', '_Z'],
 ];
 
-export const deserializePeerData = (peerData: string, decompress?: boolean): PeerData => {
-    const source = decompress
+export const deserializePeerData = (peerData: string, deMinify?: boolean): PeerData => {
+    const source = deMinify
         ? compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
               return reduced.replaceAll(symbol, text);
           }, peerData)
@@ -52,9 +52,9 @@ export const deserializePeerData = (peerData: string, decompress?: boolean): Pee
     return JSON.parse(source);
 };
 
-export const serializePeerData = (peerData: PeerData, compress?: boolean): string => {
+export const serializePeerData = (peerData: PeerData, minify?: boolean): string => {
     const source = JSON.stringify(peerData);
-    return compress
+    return minify
         ? compressionTransformations.reduce<string>((reduced, [text, symbol]) => {
               return reduced.replaceAll(text, symbol);
           }, source)
