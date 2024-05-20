@@ -1,9 +1,12 @@
 import { deserializePeerData, serializePeerData } from './serialization';
 
-export interface PeerToPeerParameters {
-    onConnectionClosed?: () => void;
+export interface PeerToPeerHandlers {
+    onConnectionClosed?: (instance: PeerToPeerMessaging) => void;
     onConnectionReady?: (instance: PeerToPeerMessaging) => void;
     onMessageReceived: (message: string, instance: PeerToPeerMessaging) => void;
+}
+
+export interface PeerToPeerOptions {
     useCompression?: boolean;
 }
 
@@ -13,12 +16,13 @@ export enum PeerMode {
 }
 
 export class PeerToPeerMessaging {
-    protected readonly rtcConnection: RTCPeerConnection = new RTCPeerConnection();
-    protected readonly localIceCandidates: RTCIceCandidate[] = [];
+    protected rtcConnection: RTCPeerConnection;
+    protected localIceCandidates: RTCIceCandidate[];
 
     protected session: RTCSessionDescriptionInit | undefined;
     protected dataChannel: RTCDataChannel | undefined;
 
+    protected useCompression: boolean | undefined;
     protected peerDataReadyTimeout: number | undefined;
     protected peerDataResolver: ((peerData: string) => void) | undefined;
 
@@ -27,49 +31,25 @@ export class PeerToPeerMessaging {
         return this._peerMode;
     }
 
-    constructor(public readonly params: PeerToPeerParameters) {
-        this.rtcConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.localIceCandidates.push(event.candidate);
+    get isActive() {
+        return !!this.dataChannel;
+    }
 
-                if (this.peerDataReadyTimeout) {
-                    clearTimeout(this.peerDataReadyTimeout);
-                }
-                this.peerDataReadyTimeout = window.setTimeout(() => {
-                    this.peerDataResolver!(
-                        serializePeerData(
-                            { candidates: this.localIceCandidates, session: this.session! },
-                            this.params.useCompression,
-                        ),
-                    );
-                }, 300);
-            }
-        };
-
-        this.rtcConnection.ondatachannel = (event) => {
-            const dataChannel = event.channel;
-            this.setDataChannelHandlers(dataChannel);
-        };
-
-        this.rtcConnection.onconnectionstatechange = () => {
-            if (
-                this.rtcConnection.connectionState === 'disconnected' &&
-                this.params.onConnectionClosed
-            ) {
-                this.params.onConnectionClosed();
-            }
-        };
+    constructor(protected handlers: PeerToPeerHandlers, options?: PeerToPeerOptions) {
+        this.reset(handlers, options);
     }
 
     /** Closes the connection and calls onConnectionClosed when done */
     closeConnection() {
+        /* This will close the data channel at the same time for both peers, which
+        is more reliable than the connection.onconnectionstatechange; using the
+        dataChannel.onclose handler to signal the connection closing */
         this.rtcConnection.close();
-        this.params.onConnectionClosed?.();
     }
 
     /** Completes the connection and calls onConnectionReady when done */
     completeConnection(remoteData: string) {
-        const remotePeerData = deserializePeerData(remoteData, this.params.useCompression);
+        const remotePeerData = deserializePeerData(remoteData, this.useCompression);
         this.rtcConnection.setRemoteDescription(remotePeerData.session);
     }
 
@@ -78,7 +58,7 @@ export class PeerToPeerMessaging {
     async joinConnection(remoteData: string) {
         this._peerMode = PeerMode.joiner;
 
-        const remotePeerData = deserializePeerData(remoteData, this.params.useCompression);
+        const remotePeerData = deserializePeerData(remoteData, this.useCompression);
         await this.rtcConnection.setRemoteDescription(remotePeerData.session);
 
         for (const candidate of remotePeerData.candidates) {
@@ -96,7 +76,47 @@ export class PeerToPeerMessaging {
         return connectionPromise;
     }
 
-    send(message: string) {
+    reset(handlers?: PeerToPeerHandlers, options?: PeerToPeerOptions) {
+        if (handlers) {
+            this.handlers = this.handlers;
+        }
+        if (options) {
+            this.useCompression = options?.useCompression;
+        }
+
+        this.localIceCandidates = [];
+        this.session = undefined;
+        this.peerDataReadyTimeout = undefined;
+        this.peerDataResolver = undefined;
+        this._peerMode = undefined;
+
+        this.rtcConnection = new RTCPeerConnection();
+
+        this.rtcConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                this.localIceCandidates.push(event.candidate);
+
+                if (this.peerDataReadyTimeout) {
+                    clearTimeout(this.peerDataReadyTimeout);
+                }
+                this.peerDataReadyTimeout = window.setTimeout(() => {
+                    this.peerDataResolver!(
+                        serializePeerData(
+                            { candidates: this.localIceCandidates, session: this.session! },
+                            this.useCompression,
+                        ),
+                    );
+                }, 300);
+            }
+        };
+
+        this.rtcConnection.ondatachannel = (event) => {
+            const dataChannel = event.channel;
+            this.setDataChannelHandlers(dataChannel);
+        };
+    }
+
+    sendMessage(message: string) {
         if (this.dataChannel) {
             this.dataChannel.send(message);
             return true;
@@ -126,17 +146,16 @@ export class PeerToPeerMessaging {
     private setDataChannelHandlers(dataChannel: RTCDataChannel) {
         dataChannel.onopen = () => {
             this.dataChannel = dataChannel;
-            if (this.params.onConnectionReady) {
-                this.params.onConnectionReady(this);
-            }
+            this.handlers.onConnectionReady?.(this);
         };
 
         dataChannel.onmessage = (event) => {
-            this.params.onMessageReceived(event.data, this);
+            this.handlers.onMessageReceived(event.data, this);
         };
 
         dataChannel.onclose = () => {
             this.dataChannel = undefined;
+            this.handlers.onConnectionClosed?.(this);
         };
     }
 }

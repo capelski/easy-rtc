@@ -13,7 +13,6 @@ interface Message {
 }
 
 function App() {
-    const [connectionReady, setConnectionReady] = useState(false);
     const [displayQRCode, setDisplayQRCode] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [remotePeerData, setRemotePeerData] = useState('');
@@ -25,20 +24,20 @@ function App() {
     });
 
     const reset = () => {
-        setConnectionReady(false);
         setDisplayQRCode(false);
         setMessages([]);
         setRemotePeerData('');
         setTextMessage('');
+        messaging.reset();
     };
 
-    const messaging = usePeerToPeerMessaging({
-        onConnectionClosed: reset,
-        onConnectionReady: () => setConnectionReady(true),
-        onMessageReceived: (message) =>
-            foreignerMessages.registerEvent({ sender: 'They', text: message }),
-        useCompression: true,
-    });
+    const messaging = usePeerToPeerMessaging(
+        {
+            onMessageReceived: (message) =>
+                foreignerMessages.registerEvent({ sender: 'They', text: message }),
+        },
+        { useCompression: true },
+    );
 
     const videoRef = useRef(null);
 
@@ -85,7 +84,7 @@ function App() {
 
     return (
         <div>
-            {!connectionReady ? (
+            {!messaging.isActive && !messaging.hasCompletedConnection && (
                 <React.Fragment>
                     {!messaging.peerMode ? (
                         <div>
@@ -186,11 +185,14 @@ function App() {
                         </div>
                     )}
                 </React.Fragment>
-            ) : (
+            )}
+
+            {messaging.hasCompletedConnection && (
                 <React.Fragment>
                     <p>
                         <span>Messages</span>
                         <textarea
+                            disabled={!messaging.isActive}
                             onChange={(event) => {
                                 setTextMessage(event.target.value);
                             }}
@@ -199,6 +201,7 @@ function App() {
                             value={textMessage}
                         ></textarea>
                         <button
+                            disabled={!messaging.isActive}
                             onClick={() => {
                                 setMessages([...messages, { sender: 'You', text: textMessage }]);
                                 messaging.sendMessage(textMessage);
@@ -217,12 +220,15 @@ function App() {
                     </div>
                     <p>
                         <button
+                            disabled={!messaging.isActive}
                             onClick={() => {
                                 messaging.closeConnection();
-                                reset();
                             }}
                         >
                             Close connection
+                        </button>
+                        <button disabled={messaging.isActive} onClick={reset}>
+                            Reset
                         </button>
                     </p>
                 </React.Fragment>

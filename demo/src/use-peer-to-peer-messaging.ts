@@ -1,75 +1,99 @@
 import { useMemo, useState } from 'react';
 import {
     PeerMode,
+    PeerToPeerHandlers,
     PeerToPeerMessaging,
-    PeerToPeerParameters,
+    PeerToPeerOptions,
 } from '../../src/peer-to-peer-messaging';
 
-export { PeerMode, PeerToPeerParameters };
+export { PeerMode, PeerToPeerHandlers, PeerToPeerMessaging, PeerToPeerOptions };
 
-export const usePeerToPeerMessaging = (params: PeerToPeerParameters) => {
-    const [connection, setConnection] = useState<PeerToPeerMessaging>(
-        () => new PeerToPeerMessaging({ ...params }),
-    );
+export const usePeerToPeerMessaging = (
+    handlers: PeerToPeerHandlers,
+    options?: PeerToPeerOptions,
+) => {
+    const [hasCompletedConnection, setHasCompletedConnection] = useState(false);
+    const [isActive, setIsActive] = useState(false);
     const [localPeerData, setLocalPeerData] = useState('');
     const [peerMode, setPeerMode] = useState<PeerMode>();
 
-    const { closeConnection, completeConnection, joinConnection, sendMessage, startConnection } =
-        useMemo(() => {
-            const originalHandler = params.onConnectionClosed;
-            connection.params.onConnectionClosed = () => {
-                setLocalPeerData('');
-                originalHandler?.();
-                setTimeout(() => {
-                    setConnection(new PeerToPeerMessaging({ ...params }));
-                }, 0);
-            };
+    const {
+        closeConnection,
+        completeConnection,
+        joinConnection,
+        reset,
+        sendMessage,
+        startConnection,
+    } = useMemo(() => {
+        const wrapHandlers = (_handlers: PeerToPeerHandlers): PeerToPeerHandlers => ({
+            onConnectionClosed: (instance) => {
+                _handlers.onConnectionClosed?.(instance);
+                setIsActive(false);
+            },
+            onConnectionReady: (instance) => {
+                _handlers.onConnectionReady?.(instance);
+                setHasCompletedConnection(true);
+                setIsActive(true);
+            },
+            onMessageReceived: (message, instance) => {
+                _handlers.onMessageReceived(message, instance);
+            },
+        });
 
-            const startConnection = async () => {
-                const connectionPromise = connection.startConnection();
-                setPeerMode(connection.peerMode);
-                const nextLocalPeerData = await connectionPromise;
-                setLocalPeerData(nextLocalPeerData);
-            };
+        const connection = new PeerToPeerMessaging(wrapHandlers(handlers), options);
 
-            const joinConnection = async (remotePeerData: string) => {
-                const connectionPromise = connection.joinConnection(remotePeerData);
-                setPeerMode(connection.peerMode);
-                const nextLocalPeerData = await connectionPromise;
+        const startConnection = async () => {
+            const connectionPromise = connection.startConnection();
+            setPeerMode(connection.peerMode);
+            const nextLocalPeerData = await connectionPromise;
+            setLocalPeerData(nextLocalPeerData);
+        };
 
-                setLocalPeerData(nextLocalPeerData);
-            };
+        const joinConnection = async (remotePeerData: string) => {
+            const connectionPromise = connection.joinConnection(remotePeerData);
+            setPeerMode(connection.peerMode);
+            const nextLocalPeerData = await connectionPromise;
+            setLocalPeerData(nextLocalPeerData);
+        };
 
-            const completeConnection = (remotePeerData: string) => {
-                connection.completeConnection(remotePeerData);
-            };
+        const completeConnection: PeerToPeerMessaging['completeConnection'] =
+            connection.completeConnection.bind(connection);
 
-            const sendMessage = (message: string) => {
-                connection.send(message);
-            };
+        const sendMessage: PeerToPeerMessaging['sendMessage'] =
+            connection.sendMessage.bind(connection);
 
-            const closeConnection = () => {
-                connection.closeConnection();
-            };
+        const closeConnection: PeerToPeerMessaging['closeConnection'] =
+            connection.closeConnection.bind(connection);
 
-            return {
-                connection,
-                closeConnection,
-                completeConnection,
-                joinConnection,
-                sendMessage,
-                startConnection,
-            };
-        }, [connection]);
+        const reset = (newHandlers?: PeerToPeerHandlers, newOptions?: PeerToPeerOptions) => {
+            connection.reset(newHandlers ? wrapHandlers(newHandlers) : undefined, newOptions);
+            setHasCompletedConnection(false);
+            setIsActive(false);
+            setLocalPeerData('');
+            setPeerMode(connection.peerMode);
+        };
+
+        return {
+            closeConnection,
+            completeConnection,
+            joinConnection,
+            reset,
+            sendMessage,
+            startConnection,
+        };
+    }, []);
 
     return {
         // Handlers
         closeConnection,
         completeConnection,
         joinConnection,
+        reset,
         sendMessage,
         startConnection,
         // State
+        hasCompletedConnection,
+        isActive,
         localPeerData,
         peerMode,
     };
