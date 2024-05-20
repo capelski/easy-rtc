@@ -13,10 +13,10 @@ interface Message {
 }
 
 function App() {
-    const [displayQRCode, setDisplayQRCode] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [remotePeerData, setRemotePeerData] = useState('');
     const [textMessage, setTextMessage] = useState('');
+    const [useQRCode, setUseQRCode] = useState(false);
 
     const foreignerMessages = useExternalEvents<Message>();
     foreignerMessages.processNextEvent((message) => {
@@ -24,10 +24,10 @@ function App() {
     });
 
     const reset = () => {
-        setDisplayQRCode(false);
         setMessages([]);
         setRemotePeerData('');
         setTextMessage('');
+        setUseQRCode(false);
         messaging.reset();
     };
 
@@ -56,6 +56,8 @@ function App() {
     };
 
     const scanQrHandler = async () => {
+        setUseQRCode(true);
+
         const stream = await navigator.mediaDevices.getUserMedia({
             video: true,
         });
@@ -78,7 +80,7 @@ function App() {
         const data = params.get(remoteDataParameterName);
         if (data) {
             setRemotePeerData(data);
-            window.history.pushState({}, '', window.location.origin);
+            window.history.pushState({}, '', window.location.origin + window.location.pathname);
         }
     }, []);
 
@@ -153,7 +155,7 @@ function App() {
                                 </button>
                             </p>
 
-                            <video ref={videoRef} width="100%"></video>
+                            {useQRCode && <video ref={videoRef} width="100%"></video>}
                         </div>
                     ) : (
                         <div>
@@ -168,14 +170,14 @@ function App() {
                                     Copy verification code
                                 </button>
                                 <button
-                                    disabled={displayQRCode}
-                                    onClick={() => setDisplayQRCode(true)}
+                                    disabled={useQRCode}
+                                    onClick={() => setUseQRCode(true)}
                                     type="button"
                                 >
                                     Display QR code
                                 </button>
                             </p>
-                            {displayQRCode && (
+                            {useQRCode && (
                                 <QRCode
                                     value={messaging.localPeerData}
                                     size={0.9 * Math.min(window.innerHeight, window.innerWidth)}
