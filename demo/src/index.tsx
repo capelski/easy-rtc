@@ -18,8 +18,8 @@ function App() {
     const [textMessage, setTextMessage] = useState('');
     const [useQRCode, setUseQRCode] = useState(false);
 
-    const foreignerMessages = useExternalEvents<Message>();
-    foreignerMessages.processNextEvent((message) => {
+    const externalMessages = useExternalEvents<Message>();
+    externalMessages.processNextEvent((message) => {
         setMessages([...messages, message]);
     });
 
@@ -34,7 +34,7 @@ function App() {
     const messaging = usePeerToPeerMessaging(
         {
             onMessageReceived: (message) =>
-                foreignerMessages.registerEvent({ sender: 'They', text: message }),
+                externalMessages.registerEvent({ sender: 'They', text: message }),
         },
         { minification: true },
     );
