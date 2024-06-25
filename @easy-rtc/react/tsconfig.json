@@ -1,9 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "./tsconfig.react.json",
   "compilerOptions": {
-    "declaration": true,
-    "jsx": "react",
-    "outDir": "./distribution",
-    "rootDir": "./source"
+    "paths": {
+      "@easy-rtc/core": ["../core/source/index.ts"]
+    }
   }
 }
