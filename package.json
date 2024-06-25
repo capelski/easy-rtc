@@ -1,13 +1,11 @@
 {
-    "name": "peer-to-peer-messaging",
-    "version": "1.0.0",
-    "scripts": {
-        "build": "npm run clean && tsc -p tsconfig.json",
-        "clean": "rm -rf dist"
-    },
-    "author": "Carles Capellas <capellas.carles@gmail.com>",
-    "license": "ISC",
-    "devDependencies": {
-        "typescript": "^5.4.5"
-    }
+  "name": "easy-rtc",
+  "version": "1.0.0",
+  "author": "Carles Capellas <capellas.carles@gmail.com>",
+  "license": "ISC",
+  "workspaces": [
+    "@easy-rtc/core",
+    "@easy-rtc/demo-react",
+    "@easy-rtc/react"
+  ]
 }

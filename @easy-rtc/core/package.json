@@ -1,0 +1,19 @@
+{
+  "name": "@easy-rtc/core",
+  "version": "1.0.0",
+  "description": "Peer-to-peer communication library based on the browser-native WebRTC capabilities",
+  "main": "distribution/index.js",
+  "types": "distribution/index.d.ts",
+  "scripts": {
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "clean": "rm -rf distribution"
+  },
+  "author": "Carles Capellas <capellas.carles@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
