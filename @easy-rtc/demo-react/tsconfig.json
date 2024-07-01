@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.demo-react.json",
   "compilerOptions": {
+    "rootDir": "..",
     "paths": {
       "@easy-rtc/react": ["../react/source/index.ts"]
     }

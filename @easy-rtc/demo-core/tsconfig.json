@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.demo-core.json",
   "compilerOptions": {
+    "rootDir": "..",
     "paths": {
       "@easy-rtc/core": ["../core/source/index.ts"]
     }
