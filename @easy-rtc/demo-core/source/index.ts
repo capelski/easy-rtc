@@ -26,7 +26,7 @@ const reset = document.getElementById('reset')!;
 const addMessage = (text: string) => {
   const paragraph = document.createElement('p');
   paragraph.innerText = text;
-  messagingHistory.prepend(paragraph);
+  messagingHistory.append(paragraph);
 };
 
 const messaging = new MessagingConnection(
