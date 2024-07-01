@@ -5,6 +5,7 @@
   "license": "ISC",
   "workspaces": [
     "@easy-rtc/core",
+    "@easy-rtc/demo-core",
     "@easy-rtc/demo-react",
     "@easy-rtc/react"
   ],

@@ -1,16 +1,14 @@
 {
-  "name": "@easy-rtc/demo-react",
+  "name": "@easy-rtc/demo-core",
   "version": "1.0.0",
   "scripts": {
     "build": "npm run clean && webpack --config webpack/production.config.js",
-    "clean": "rm -rf ../../docs/react",
+    "clean": "rm -rf ../../docs/core",
     "start": "webpack serve --config webpack/development.config.js"
   },
   "author": "Carles Capellas <capellas.carles@gmail.com>",
   "license": "ISC",
   "devDependencies": {
-    "@types/react": "^18.0.33",
-    "@types/react-dom": "^18.0.11",
     "html-loader": "^4.2.0",
     "html-webpack-plugin": "^5.5.0",
     "ts-loader": "^9.4.2",
@@ -21,12 +19,7 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
-    "@easy-rtc/react": "^1.0.0",
-    "qr-scanner": "^1.4.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-external-events": "^1.0.3",
-    "react-qr-code": "^2.0.12"
+    "@easy-rtc/core": "^1.0.0"
   },
   "private": true
 }

@@ -2,14 +2,14 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { resolve } = require('path');
 
 module.exports = {
-  entry: './source/index.tsx',
+  entry: './source/index.ts',
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
+        test: /\.ts$/,
         loader: 'ts-loader',
         options: {
-          configFile: '../tsconfig.demo-react.json',
+          configFile: '../tsconfig.demo-core.json',
         },
       },
       {
@@ -23,8 +23,8 @@ module.exports = {
     ],
   },
   output: {
-    path: resolve(__dirname, '..', '..', '..', 'docs', 'react'),
-    publicPath: '/easy-rtc/react',
+    path: resolve(__dirname, '..', '..', '..', 'docs', 'core'),
+    publicPath: '/easy-rtc/core',
   },
   plugins: [
     new HtmlWebpackPlugin({
@@ -33,6 +33,6 @@ module.exports = {
     }),
   ],
   resolve: {
-    extensions: ['.js', '.ts', '.tsx'],
+    extensions: ['.js', '.ts'],
   },
 };
