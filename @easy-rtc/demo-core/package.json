@@ -19,7 +19,7 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
-    "@easy-rtc/core": "^1.0.0"
+    "@easy-rtc/core": "^1.0.1"
   },
   "private": true
 }
