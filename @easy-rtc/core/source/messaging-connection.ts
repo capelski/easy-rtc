@@ -27,6 +27,11 @@ export class MessagingConnection {
   protected peerDataReadyTimeout: number | undefined;
   protected peerDataResolver: ((peerData: string) => void) | undefined;
 
+  protected _localPeerData: string | undefined;
+  get localPeerData() {
+    return this._localPeerData;
+  }
+
   protected _peerMode: PeerMode | undefined;
   get peerMode() {
     return this._peerMode;
@@ -93,6 +98,7 @@ export class MessagingConnection {
     this.peerDataReadyTimeout = undefined;
     this.peerDataResolver = undefined;
     this._peerMode = undefined;
+    this._localPeerData = undefined;
 
     this.rtcConnection = new RTCPeerConnection();
 
@@ -104,12 +110,11 @@ export class MessagingConnection {
           clearTimeout(this.peerDataReadyTimeout);
         }
         this.peerDataReadyTimeout = window.setTimeout(() => {
-          this.peerDataResolver!(
-            serializePeerData(
-              { candidates: this.localIceCandidates, session: this.session! },
-              this.minification,
-            ),
+          this._localPeerData = serializePeerData(
+            { candidates: this.localIceCandidates, session: this.session! },
+            this.minification,
           );
+          this.peerDataResolver!(this._localPeerData);
         }, 300);
       }
     };
