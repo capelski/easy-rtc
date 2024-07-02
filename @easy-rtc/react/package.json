@@ -1,6 +1,6 @@
 {
   "name": "@easy-rtc/react",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "React peer-to-peer communication library based on the browser-native WebRTC capabilities",
   "main": "distribution/index.js",
   "types": "distribution/index.d.ts",
@@ -18,7 +18,7 @@
     "react": "^18.3.1"
   },
   "dependencies": {
-    "@easy-rtc/core": "^1.0.1"
+    "@easy-rtc/core": "^1.0.2"
   },
   "publishConfig": {
     "access": "public"
