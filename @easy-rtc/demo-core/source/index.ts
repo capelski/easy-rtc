@@ -29,8 +29,8 @@ const addMessage = (text: string) => {
   messagingHistory.append(paragraph);
 };
 
-const messaging = new MessagingConnection(
-  {
+const messaging = new MessagingConnection({
+  handlers: {
     onConnectionReady: () => {
       starterPeer.style.display = 'none';
       joinerPeer.style.display = 'none';
@@ -46,8 +46,8 @@ const messaging = new MessagingConnection(
       reset.removeAttribute('disabled');
     },
   },
-  { minification: true },
-);
+  minification: true,
+});
 
 startConnection.onclick = async () => {
   peerModeSelection.style.display = 'none';
