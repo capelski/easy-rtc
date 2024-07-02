@@ -1,7 +1,6 @@
 import { MessagingConnection, PeerMode, useMessagingConnection } from '@easy-rtc/react';
 import QrScanner from 'qr-scanner';
 import React, { useEffect, useRef, useState } from 'react';
-import { useExternalEvents } from 'react-external-events';
 import QRCode from 'react-qr-code';
 
 export const remoteDataParameterName = 'd';
@@ -23,10 +22,12 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
   const messaging = useMessagingConnection(props.connection);
 
-  const externalMessages = useExternalEvents<Message>();
-  externalMessages.processNext((message) => {
-    setMessages([...messages, message]);
-  });
+  useEffect(() => {
+    // The event handler needs to be re-declared every time messages changes
+    messaging.setHandler('onMessageReceived', (message) => {
+      setMessages([...messages, { sender: 'They', text: message }]);
+    });
+  }, [messages]);
 
   const reset = () => {
     setMessages([]);
@@ -79,10 +80,6 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
       setRemotePeerData(data);
       window.history.pushState({}, '', window.location.origin + window.location.pathname);
     }
-
-    messaging.setHandler('onMessageReceived', (message) => {
-      externalMessages.registerEvent({ sender: 'They', text: message });
-    });
   }, []);
 
   return (
