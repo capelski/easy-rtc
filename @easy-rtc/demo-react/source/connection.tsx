@@ -195,7 +195,7 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
               value={textMessage}
             ></textarea>
             <button
-              disabled={!messaging.isActive}
+              disabled={!messaging.isActive || !textMessage}
               onClick={() => {
                 setMessages([...messages, { sender: 'You', text: textMessage }]);
                 messaging.sendMessage(textMessage);
