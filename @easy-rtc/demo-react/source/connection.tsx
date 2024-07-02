@@ -1,4 +1,4 @@
-import { PeerMode, useMessagingConnection } from '@easy-rtc/react';
+import { MessagingConnection, PeerMode, useMessagingConnection } from '@easy-rtc/react';
 import QrScanner from 'qr-scanner';
 import React, { useEffect, useRef, useState } from 'react';
 import { useExternalEvents } from 'react-external-events';
@@ -11,11 +11,17 @@ interface Message {
   text: string;
 }
 
-export const Connection: React.FC = () => {
+export type ConnectionProps = {
+  connection: MessagingConnection;
+};
+
+export const Connection: React.FC<ConnectionProps> = (props) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [remotePeerData, setRemotePeerData] = useState('');
   const [textMessage, setTextMessage] = useState('');
   const [useQRCode, setUseQRCode] = useState(false);
+
+  const messaging = useMessagingConnection(props.connection);
 
   const externalMessages = useExternalEvents<Message>();
   externalMessages.processNext((message) => {
@@ -29,14 +35,6 @@ export const Connection: React.FC = () => {
     setUseQRCode(false);
     messaging.reset();
   };
-
-  const messaging = useMessagingConnection(
-    {
-      onMessageReceived: (message) =>
-        externalMessages.registerEvent({ sender: 'They', text: message }),
-    },
-    { minification: true },
-  );
 
   const videoRef = useRef(null);
 
@@ -81,6 +79,10 @@ export const Connection: React.FC = () => {
       setRemotePeerData(data);
       window.history.pushState({}, '', window.location.origin + window.location.pathname);
     }
+
+    messaging.setHandler('onMessageReceived', (message) => {
+      externalMessages.registerEvent({ sender: 'They', text: message });
+    });
   }, []);
 
   return (

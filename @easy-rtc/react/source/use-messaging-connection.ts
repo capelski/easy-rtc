@@ -1,15 +1,39 @@
 import {
   MessagingConnection,
-  MessagingConnectionHandlers,
   MessagingConnectionOptions,
+  OnConnectionClosedHandler,
+  OnConnectionReadyHandler,
+  OnMessageReceivedHandler,
   PeerMode,
 } from '@easy-rtc/core';
 import { useMemo, useState } from 'react';
 
-export const useMessagingConnection = (
-  handlers: MessagingConnectionHandlers,
-  options?: MessagingConnectionOptions,
-) => {
+export type MessagingConnectionReact = Pick<
+  MessagingConnection,
+  | 'closeConnection'
+  | 'completeConnection'
+  | 'joinConnection'
+  | 'reset'
+  | 'sendMessage'
+  | 'startConnection'
+> & {
+  readonly hasCompletedConnection: boolean;
+  readonly isActive: boolean;
+  readonly peerMode: PeerMode | undefined;
+  readonly localPeerData: string;
+  setHandler(event: 'onConnectionClosed', handler: OnConnectionClosedHandler): void;
+  setHandler(event: 'onConnectionReady', handler: OnConnectionReadyHandler): void;
+  setHandler(event: 'onMessageReceived', handler: OnMessageReceivedHandler): void;
+};
+
+export function useMessagingConnection(): MessagingConnectionReact;
+export function useMessagingConnection(
+  options: MessagingConnectionOptions,
+): MessagingConnectionReact;
+export function useMessagingConnection(connection: MessagingConnection): MessagingConnectionReact;
+export function useMessagingConnection(
+  connectionOrOptions?: MessagingConnection | MessagingConnectionOptions,
+): MessagingConnectionReact {
   const [hasCompletedConnection, setHasCompletedConnection] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [localPeerData, setLocalPeerData] = useState('');
@@ -21,30 +45,46 @@ export const useMessagingConnection = (
     joinConnection,
     reset,
     sendMessage,
+    setHandler,
     startConnection,
   } = useMemo(() => {
-    const wrapHandlers = (_handlers: MessagingConnectionHandlers): MessagingConnectionHandlers => ({
+    const connection =
+      connectionOrOptions instanceof MessagingConnection
+        ? connectionOrOptions
+        : new MessagingConnection(connectionOrOptions);
+
+    const originalHandlers = connection.handlers;
+    connection.handlers = {
       onConnectionClosed: (instance) => {
-        _handlers.onConnectionClosed?.(instance);
+        originalHandlers.onConnectionClosed?.(instance);
         setIsActive(false);
       },
       onConnectionReady: (instance) => {
-        _handlers.onConnectionReady?.(instance);
+        originalHandlers.onConnectionReady?.(instance);
         setHasCompletedConnection(true);
         setIsActive(true);
       },
       onMessageReceived: (message, instance) => {
-        _handlers.onMessageReceived(message, instance);
+        originalHandlers.onMessageReceived?.(message, instance);
       },
-    });
+    };
 
-    const connection = new MessagingConnection(wrapHandlers(handlers), options);
+    function setHandler(event: 'onConnectionClosed', handler: OnConnectionClosedHandler): void;
+    function setHandler(event: 'onConnectionReady', handler: OnConnectionReadyHandler): void;
+    function setHandler(event: 'onMessageReceived', handler: OnMessageReceivedHandler): void;
+    function setHandler(
+      event: 'onConnectionClosed' | 'onConnectionReady' | 'onMessageReceived',
+      handler: any,
+    ) {
+      originalHandlers[event] = handler;
+    }
 
     const startConnection = async () => {
       const connectionPromise = connection.startConnection();
       setPeerMode(connection.peerMode);
       const nextLocalPeerData = await connectionPromise;
       setLocalPeerData(nextLocalPeerData);
+      return nextLocalPeerData;
     };
 
     const joinConnection = async (remotePeerData: string) => {
@@ -52,6 +92,7 @@ export const useMessagingConnection = (
       setPeerMode(connection.peerMode);
       const nextLocalPeerData = await connectionPromise;
       setLocalPeerData(nextLocalPeerData);
+      return nextLocalPeerData;
     };
 
     const completeConnection: MessagingConnection['completeConnection'] =
@@ -62,11 +103,8 @@ export const useMessagingConnection = (
     const closeConnection: MessagingConnection['closeConnection'] =
       connection.closeConnection.bind(connection);
 
-    const reset = (
-      newHandlers?: MessagingConnectionHandlers,
-      newOptions?: MessagingConnectionOptions,
-    ) => {
-      connection.reset(newHandlers ? wrapHandlers(newHandlers) : undefined, newOptions);
+    const reset = () => {
+      connection.reset();
       setHasCompletedConnection(false);
       setIsActive(false);
       setLocalPeerData('');
@@ -79,6 +117,7 @@ export const useMessagingConnection = (
       joinConnection,
       reset,
       sendMessage,
+      setHandler,
       startConnection,
     };
   }, []);
@@ -90,6 +129,7 @@ export const useMessagingConnection = (
     joinConnection,
     reset,
     sendMessage,
+    setHandler,
     startConnection,
     // State
     hasCompletedConnection,
@@ -97,4 +137,4 @@ export const useMessagingConnection = (
     localPeerData,
     peerMode,
   };
-};
+}

@@ -1,21 +1,23 @@
+import { MessagingConnection } from '@easy-rtc/react';
 import React, { useState } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import { Connection } from './connection';
 
 function App() {
-  // Simple way to render multiple Connection components
-  const [connections, setConnections] = useState<number[]>([1]);
+  const [connections, setConnections] = useState<MessagingConnection[]>(() => [
+    new MessagingConnection({ minification: true }),
+  ]);
 
   return (
     <React.Fragment>
-      {connections.map((value) => (
-        <Connection key={value} />
+      {connections.map((connection, index) => (
+        <Connection connection={connection} key={index} />
       ))}
       <div style={{ backgroundColor: '#e8fbe8', margin: 8, padding: 8 }}>
         <button
           type="button"
           onClick={() => {
-            setConnections([...connections, connections.length + 1]);
+            setConnections([...connections, new MessagingConnection({ minification: true })]);
           }}
         >
           Add connection
