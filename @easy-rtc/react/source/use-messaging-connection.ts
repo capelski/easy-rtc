@@ -1,4 +1,5 @@
 import {
+  DefaultMessageType,
   MessagingConnection,
   MessagingConnectionOptions,
   OnConnectionClosedHandler,
@@ -8,8 +9,8 @@ import {
 } from '@easy-rtc/core';
 import { useMemo, useState } from 'react';
 
-export type MessagingConnectionReact = Pick<
-  MessagingConnection,
+export type MessagingConnectionReact<TMessage = DefaultMessageType> = Pick<
+  MessagingConnection<TMessage>,
   | 'closeConnection'
   | 'completeConnection'
   | 'joinConnection'
@@ -21,19 +22,23 @@ export type MessagingConnectionReact = Pick<
   readonly isActive: boolean;
   readonly peerMode: PeerMode | undefined;
   readonly localPeerData: string;
-  setHandler(event: 'onConnectionClosed', handler: OnConnectionClosedHandler): void;
-  setHandler(event: 'onConnectionReady', handler: OnConnectionReadyHandler): void;
-  setHandler(event: 'onMessageReceived', handler: OnMessageReceivedHandler): void;
+  setHandler(event: 'onConnectionClosed', handler: OnConnectionClosedHandler<TMessage>): void;
+  setHandler(event: 'onConnectionReady', handler: OnConnectionReadyHandler<TMessage>): void;
+  setHandler(event: 'onMessageReceived', handler: OnMessageReceivedHandler<TMessage>): void;
 };
 
-export function useMessagingConnection(): MessagingConnectionReact;
-export function useMessagingConnection(
-  options: MessagingConnectionOptions,
+export function useMessagingConnection<
+  TMessage = DefaultMessageType,
+>(): MessagingConnectionReact<TMessage>;
+export function useMessagingConnection<TMessage = DefaultMessageType>(
+  options: MessagingConnectionOptions<TMessage>,
 ): MessagingConnectionReact;
-export function useMessagingConnection(connection: MessagingConnection): MessagingConnectionReact;
-export function useMessagingConnection(
-  connectionOrOptions?: MessagingConnection | MessagingConnectionOptions,
-): MessagingConnectionReact {
+export function useMessagingConnection<TMessage = DefaultMessageType>(
+  connection: MessagingConnection<TMessage>,
+): MessagingConnectionReact<TMessage>;
+export function useMessagingConnection<TMessage = DefaultMessageType>(
+  connectionOrOptions?: MessagingConnection<TMessage> | MessagingConnectionOptions<TMessage>,
+): MessagingConnectionReact<TMessage> {
   const [hasCompletedConnection, setHasCompletedConnection] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [localPeerData, setLocalPeerData] = useState('');
@@ -51,27 +56,36 @@ export function useMessagingConnection(
     const connection =
       connectionOrOptions instanceof MessagingConnection
         ? connectionOrOptions
-        : new MessagingConnection(connectionOrOptions);
+        : new MessagingConnection<TMessage>(connectionOrOptions);
 
     const originalHandlers = connection.handlers;
     connection.handlers = {
-      onConnectionClosed: (instance) => {
-        originalHandlers.onConnectionClosed?.(instance);
+      onConnectionClosed: (connection) => {
+        originalHandlers.onConnectionClosed?.(connection);
         setIsActive(false);
       },
-      onConnectionReady: (instance) => {
-        originalHandlers.onConnectionReady?.(instance);
+      onConnectionReady: (connection) => {
+        originalHandlers.onConnectionReady?.(connection);
         setHasCompletedConnection(true);
         setIsActive(true);
       },
-      onMessageReceived: (message, instance) => {
-        originalHandlers.onMessageReceived?.(message, instance);
+      onMessageReceived: (message, connection) => {
+        originalHandlers.onMessageReceived?.(message, connection);
       },
     };
 
-    function setHandler(event: 'onConnectionClosed', handler: OnConnectionClosedHandler): void;
-    function setHandler(event: 'onConnectionReady', handler: OnConnectionReadyHandler): void;
-    function setHandler(event: 'onMessageReceived', handler: OnMessageReceivedHandler): void;
+    function setHandler(
+      event: 'onConnectionClosed',
+      handler: OnConnectionClosedHandler<TMessage>,
+    ): void;
+    function setHandler(
+      event: 'onConnectionReady',
+      handler: OnConnectionReadyHandler<TMessage>,
+    ): void;
+    function setHandler(
+      event: 'onMessageReceived',
+      handler: OnMessageReceivedHandler<TMessage>,
+    ): void;
     function setHandler(
       event: 'onConnectionClosed' | 'onConnectionReady' | 'onMessageReceived',
       handler: any,
@@ -95,12 +109,13 @@ export function useMessagingConnection(
       return nextLocalPeerData;
     };
 
-    const completeConnection: MessagingConnection['completeConnection'] =
+    const completeConnection: MessagingConnection<TMessage>['completeConnection'] =
       connection.completeConnection.bind(connection);
 
-    const sendMessage: MessagingConnection['sendMessage'] = connection.sendMessage.bind(connection);
+    const sendMessage: MessagingConnection<TMessage>['sendMessage'] =
+      connection.sendMessage.bind(connection);
 
-    const closeConnection: MessagingConnection['closeConnection'] =
+    const closeConnection: MessagingConnection<TMessage>['closeConnection'] =
       connection.closeConnection.bind(connection);
 
     const reset = () => {
