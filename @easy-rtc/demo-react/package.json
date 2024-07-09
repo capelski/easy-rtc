@@ -4,7 +4,7 @@
   "scripts": {
     "build": "npm run clean && webpack --config webpack/production.config.js",
     "clean": "rm -rf ../../docs/react",
-    "start": "webpack serve --config webpack/development.config.js"
+    "dev": "webpack serve --config webpack/development.config.js"
   },
   "author": "Carles Capellas <capellas.carles@gmail.com>",
   "license": "ISC",
@@ -21,7 +21,7 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
-    "@easy-rtc/react": "^1.1.0",
+    "@easy-rtc/react": "^1.2.0",
     "qr-scanner": "^1.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -10,7 +10,16 @@
     "@easy-rtc/react"
   ],
   "scripts": {
+    "build:all": "npm run build:lib && npm run build:demo",
+    "build:demo": "npm run build -w @easy-rtc/demo-core && npm run build -w @easy-rtc/demo-react",
+    "build:lib": "npm run build -w @easy-rtc/core && npm run build -w @easy-rtc/react",
+    "demo:core": "concurrently 'npm run dev:lib' 'npm run dev -w @easy-rtc/demo-core'",
+    "demo:react": "concurrently 'npm run dev:lib' 'npm run dev -w @easy-rtc/demo-react'",
+    "dev:lib": "concurrently 'npm run dev -w @easy-rtc/core' 'npm run dev -w @easy-rtc/react'",
     "link": "./projects-link.sh",
     "unlink": "./projects-unlink.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
