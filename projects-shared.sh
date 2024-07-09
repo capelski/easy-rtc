@@ -2,6 +2,7 @@ allFiles=(
   "package-lock.json"
   "@easy-rtc/core/package.json"
   "@easy-rtc/react/package.json"
+  "@easy-rtc/demo-core/package.json"
   "@easy-rtc/demo-react/package.json"
 );
 
@@ -46,6 +47,7 @@ installDependencies() {
   rm -rf node_modules;
 
   installDependency $dependencyMode @easy-rtc/core @easy-rtc/react
+  installDependency $dependencyMode @easy-rtc/core @easy-rtc/demo-core
   installDependency $dependencyMode @easy-rtc/react @easy-rtc/demo-react
 
   npm ci
