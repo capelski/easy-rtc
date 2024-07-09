@@ -24,7 +24,7 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
   useEffect(() => {
     // The event handler needs to be re-declared every time messages changes
-    messaging.setHandler('onMessageReceived', (message) => {
+    messaging.on('messageReceived', (message) => {
       setMessages([...messages, { sender: 'They', text: message }]);
     });
   }, [messages]);

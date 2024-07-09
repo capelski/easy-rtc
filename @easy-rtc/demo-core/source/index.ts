@@ -29,24 +29,23 @@ const addMessage = (text: string) => {
   messagingHistory.append(paragraph);
 };
 
-const messaging = new MessagingConnection({
-  handlers: {
-    onConnectionReady: () => {
-      starterPeer.style.display = 'none';
-      joinerPeer.style.display = 'none';
-      messagingArea.style.display = 'block';
-    },
-    onMessageReceived: (message) => {
-      addMessage(`They: ${message}`);
-    },
-    onConnectionClosed: () => {
-      currentMessage.setAttribute('disabled', 'true');
-      sendMessage.setAttribute('disabled', 'true');
-      closeConnection.setAttribute('disabled', 'true');
-      reset.removeAttribute('disabled');
-    },
-  },
-  minification: true,
+const messaging = new MessagingConnection({ minification: true });
+
+messaging.on('connectionReady', () => {
+  starterPeer.style.display = 'none';
+  joinerPeer.style.display = 'none';
+  messagingArea.style.display = 'block';
+});
+
+messaging.on('messageReceived', (message) => {
+  addMessage(`They: ${message}`);
+});
+
+messaging.on('connectionClosed', () => {
+  currentMessage.setAttribute('disabled', 'true');
+  sendMessage.setAttribute('disabled', 'true');
+  closeConnection.setAttribute('disabled', 'true');
+  reset.removeAttribute('disabled');
 });
 
 startConnection.onclick = async () => {
