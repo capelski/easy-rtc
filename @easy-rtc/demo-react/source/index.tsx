@@ -3,20 +3,7 @@ import React, { useState } from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import { Connection } from './connection';
 
-const getConnection = () =>
-  new MessagingConnection({
-    // Stun/Turn servers are necessary when one peer is on a private network
-    // and the other is outside of it
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      {
-        urls: 'turn:numb.viagenie.ca',
-        credential: 'muazkh',
-        username: 'webrtc@live.com',
-      },
-    ],
-    minification: true,
-  });
+const getConnection = () => new MessagingConnection({ minification: true });
 
 function App() {
   const [connections, setConnections] = useState<MessagingConnection[]>(() => [getConnection()]);
@@ -36,6 +23,10 @@ function App() {
           Add connection
         </button>
       </div>
+      <p style={{ backgroundColor: '#ffdb99', margin: 8, padding: 8 }}>
+        🛜 If a peer is using a private network (e.g. a WiFi connection) the other peer needs to use
+        the same private network
+      </p>
     </React.Fragment>
   );
 }

@@ -29,19 +29,7 @@ const addMessage = (text: string) => {
   messagingHistory.append(paragraph);
 };
 
-const messaging = new MessagingConnection({
-  // Stun/Turn servers are necessary when one peer is on a private network
-  // and the other is outside of it
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    {
-      urls: 'turn:numb.viagenie.ca',
-      credential: 'muazkh',
-      username: 'webrtc@live.com',
-    },
-  ],
-  minification: true,
-});
+const messaging = new MessagingConnection({ minification: true });
 
 messaging.on('connectionReady', () => {
   starterPeer.style.display = 'none';
