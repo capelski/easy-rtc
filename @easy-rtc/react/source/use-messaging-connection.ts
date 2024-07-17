@@ -27,7 +27,7 @@ export function useMessagingConnection<
 >(): MessagingConnectionReact<TMessage>;
 export function useMessagingConnection<TMessage = DefaultMessageType>(
   options: MessagingConnectionOptions,
-): MessagingConnectionReact;
+): MessagingConnectionReact<TMessage>;
 export function useMessagingConnection<TMessage = DefaultMessageType>(
   connection: MessagingConnection<TMessage>,
 ): MessagingConnectionReact<TMessage>;
