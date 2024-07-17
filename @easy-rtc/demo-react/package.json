@@ -21,7 +21,7 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
-    "@easy-rtc/react": "^1.2.1",
+    "@easy-rtc/react": "^1.2.2",
     "qr-scanner": "^1.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
