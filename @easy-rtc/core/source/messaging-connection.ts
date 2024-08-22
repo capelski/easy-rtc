@@ -38,7 +38,11 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
     type: 'connectionClosed' | 'connectionReady' | 'messageReceived',
   ) => void;
 
-  protected rtcConnection: RTCPeerConnection = undefined!;
+  protected _rtcConnection: RTCPeerConnection = undefined!;
+  get rtcConnection() {
+    return this._rtcConnection;
+  }
+
   protected localIceCandidates: RTCIceCandidate[] = [];
 
   protected session: RTCSessionDescriptionInit | undefined;
@@ -134,13 +138,13 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
     /** This will close the data channel at the same time for both peers, which
      * is more reliable than the connection.onconnectionstatechange. The connectionClosed
      * event will be generated in the dataChannel.onclose handler */
-    this.rtcConnection.close();
+    this._rtcConnection.close();
   }
 
   /** Completes the connection and generates a connectionReady event when done */
   completeConnection(remoteData: string) {
     const remotePeerData = deserializePeerData(remoteData, this.minification);
-    this.rtcConnection.setRemoteDescription(remotePeerData.session);
+    this._rtcConnection.setRemoteDescription(remotePeerData.session);
   }
 
   /** Joins the connection defined by remoteData and returns the data needed by
@@ -149,19 +153,19 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
     this._peerMode = PeerMode.joiner;
 
     const remotePeerData = deserializePeerData(remoteData, this.minification);
-    await this.rtcConnection.setRemoteDescription(remotePeerData.session);
+    await this._rtcConnection.setRemoteDescription(remotePeerData.session);
 
     for (const candidate of remotePeerData.candidates) {
-      await this.rtcConnection.addIceCandidate(candidate);
+      await this._rtcConnection.addIceCandidate(candidate);
     }
 
     const connectionPromise = new Promise<string>((resolve) => {
       this.peerDataResolver = resolve;
     });
 
-    this.session = await this.rtcConnection.createAnswer();
+    this.session = await this._rtcConnection.createAnswer();
     /* This will generate several ICE candidates, which will resolve the returned promise */
-    await this.rtcConnection.setLocalDescription(this.session);
+    await this._rtcConnection.setLocalDescription(this.session);
 
     return connectionPromise;
   }
@@ -174,9 +178,9 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
     this._peerMode = undefined;
     this._localPeerData = undefined;
 
-    this.rtcConnection = new RTCPeerConnection(this.configuration);
+    this._rtcConnection = new RTCPeerConnection(this.configuration);
 
-    this.rtcConnection.onicecandidate = (event) => {
+    this._rtcConnection.onicecandidate = (event) => {
       if (event.candidate) {
         this.localIceCandidates.push(event.candidate);
 
@@ -193,7 +197,7 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
       }
     };
 
-    this.rtcConnection.ondatachannel = (event) => {
+    this._rtcConnection.ondatachannel = (event) => {
       const dataChannel = event.channel;
       this.setDataChannelHandlers(dataChannel);
     };
@@ -212,16 +216,16 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
   async startConnection() {
     this._peerMode = PeerMode.starter;
 
-    const dataChannel = this.rtcConnection.createDataChannel('data-channel');
+    const dataChannel = this._rtcConnection.createDataChannel('data-channel');
     this.setDataChannelHandlers(dataChannel);
 
     const connectionPromise = new Promise<string>((resolve) => {
       this.peerDataResolver = resolve;
     });
 
-    this.session = await this.rtcConnection.createOffer();
+    this.session = await this._rtcConnection.createOffer();
     /* This will generate several ICE candidates, which will resolve the returned promise */
-    await this.rtcConnection.setLocalDescription(this.session);
+    await this._rtcConnection.setLocalDescription(this.session);
 
     return connectionPromise;
   }

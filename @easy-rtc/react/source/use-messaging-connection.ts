@@ -15,6 +15,7 @@ export type MessagingConnectionReact<TMessage = DefaultMessageType> = Pick<
   | 'reset'
   | 'sendMessage'
   | 'startConnection'
+  | 'rtcConnection'
 > & {
   readonly hasCompletedConnection: boolean;
   readonly isActive: boolean;
@@ -47,6 +48,7 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
     reset,
     sendMessage,
     startConnection,
+    rtcConnection,
   } = useMemo(() => {
     const connection: MessagingConnection<TMessage> =
       connectionOrOptions instanceof MessagingConnection
@@ -127,6 +129,7 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
       reset,
       sendMessage,
       startConnection,
+      rtcConnection: connection.rtcConnection,
     };
   }, []);
 
@@ -144,5 +147,6 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
     isActive,
     localPeerData,
     peerMode,
+    rtcConnection,
   };
 }
