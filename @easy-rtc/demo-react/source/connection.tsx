@@ -22,6 +22,29 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
   const messaging = useMessagingConnection(props.connection);
 
+  const logConnectionState = (message: string) => () => {
+    console.log(message);
+    console.log('   connectionState:', messaging.rtcConnection.connectionState);
+    console.log('   iceConnectionState:', messaging.rtcConnection.iceConnectionState);
+    console.log('   iceGatheringState:', messaging.rtcConnection.iceGatheringState);
+    console.log('   sctp?.state:', messaging.rtcConnection.sctp?.state);
+    console.log('   signalingState:', messaging.rtcConnection.signalingState);
+  };
+
+  messaging.on('connectionStateChange', logConnectionState('Connection state change'));
+
+  messaging.on('iceCandidate', logConnectionState('ICE candidate'));
+
+  messaging.on('iceCandidateError', logConnectionState('ICE Candidate error'));
+
+  messaging.on('iceConnectionStateChange', logConnectionState('ICE Connection state change'));
+
+  messaging.on('iceGatheringStateChange', logConnectionState('ICE gathering state change'));
+
+  messaging.on('negotiationNeeded', logConnectionState('Negotiation needed'));
+
+  messaging.on('signalingStateChange', logConnectionState('Signaling state change'));
+
   useEffect(() => {
     // The event handler needs to be re-declared every time messages changes
     messaging.on('messageReceived', (message) => {
@@ -227,6 +250,29 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
           </p>
         </React.Fragment>
       )}
+
+      <p style={{ fontStyle: 'italic' }}>
+        <span>
+          Connection state:{' '}
+          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.connectionState}</span> /{' '}
+        </span>
+        <span>
+          ICE connection state:{' '}
+          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.iceConnectionState}</span> /{' '}
+        </span>
+        <span>
+          ICE gathering state:{' '}
+          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.iceGatheringState}</span> /{' '}
+        </span>
+        <span>
+          SCTP state:{' '}
+          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.sctp?.state || '-'}</span> /{' '}
+        </span>
+        <span>
+          Signaling state:{' '}
+          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.signalingState}</span>
+        </span>
+      </p>
     </div>
   );
 };

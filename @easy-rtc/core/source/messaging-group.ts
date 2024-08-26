@@ -1,8 +1,5 @@
-import {
-  DefaultMessageType,
-  MessagingConnection,
-  MessagingConnectionOptions,
-} from './messaging-connection';
+import { MessagingConnection, MessagingConnectionOptions } from './messaging-connection';
+import { DefaultMessageType } from './messaging-handlers';
 
 export type DefaultNodeState = any;
 

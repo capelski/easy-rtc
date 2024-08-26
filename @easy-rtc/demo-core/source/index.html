@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <meta name="author" content="Carles Capellas" />
-    <title>Easy RTC demo</title>
+    <title>Easy RTC - Core</title>
   </head>
   <body>
     <div style="background-color: #e6f3f7; margin: 8px; padding: 8px">
@@ -66,6 +66,29 @@
           <button id="reset" type="button" disabled>Reset</button>
         </p>
       </div>
+
+      <p style="font-style: italic"">
+        <span>
+          Connection state: 
+          <span id="connectionState" style="font-weight: bold">-</span> / 
+        </span>
+        <span>
+          ICE connection state: 
+          <span id="iceConnectionState" style="font-weight: bold">-</span> / 
+        </span>
+        <span>
+          ICE gathering state: 
+          <span id="iceGatheringState" style="font-weight: bold">-</span> / 
+        </span>
+        <span>
+          SCTP state: 
+          <span id="sctpState" style="font-weight: bold">-</span> / 
+        </span>
+        <span>
+          Signaling state: 
+          <span id="signalingState" style="font-weight: bold">-</span>
+        </span>
+      </p>
     </div>
     <p style="background-color: #ffdb99; margin: 8px; padding: 8px">
       🛜 If a peer is using a private network (e.g. a WiFi connection) the other peer needs to use

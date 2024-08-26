@@ -22,6 +22,11 @@ const sendMessage = document.getElementById('send-message')!;
 const messagingHistory = document.getElementById('messaging-history')!;
 const closeConnection = document.getElementById('close-connection')!;
 const reset = document.getElementById('reset')!;
+const connectionState = document.getElementById('connectionState')!;
+const iceConnectionState = document.getElementById('iceConnectionState')!;
+const iceGatheringState = document.getElementById('iceGatheringState')!;
+const sctpState = document.getElementById('sctpState')!;
+const signalingState = document.getElementById('signalingState')!;
 
 const addMessage = (text: string) => {
   const paragraph = document.createElement('p');
@@ -31,22 +36,61 @@ const addMessage = (text: string) => {
 
 const messaging = new MessagingConnection({ minification: true });
 
-messaging.on('connectionReady', () => {
+const updateConnectionState = () => {
+  connectionState.textContent = messaging.rtcConnection.connectionState;
+  iceConnectionState.textContent = messaging.rtcConnection.iceConnectionState;
+  iceGatheringState.textContent = messaging.rtcConnection.iceGatheringState;
+  sctpState.textContent = messaging.rtcConnection.sctp?.state || '-';
+  signalingState.textContent = messaging.rtcConnection.signalingState;
+};
+
+messaging.on.connectionReady = () => {
   starterPeer.style.display = 'none';
   joinerPeer.style.display = 'none';
   messagingArea.style.display = 'block';
-});
+  updateConnectionState();
+};
 
-messaging.on('messageReceived', (message) => {
+messaging.on.messageReceived = (message) => {
   addMessage(`They: ${message}`);
-});
+};
 
-messaging.on('connectionClosed', () => {
+messaging.on.connectionClosed = () => {
   currentMessage.setAttribute('disabled', 'true');
   sendMessage.setAttribute('disabled', 'true');
   closeConnection.setAttribute('disabled', 'true');
   reset.removeAttribute('disabled');
-});
+  updateConnectionState();
+};
+
+const logConnectionState = (message: string) => () => {
+  updateConnectionState();
+
+  console.log(message);
+  console.log('   connectionState:', messaging.rtcConnection.connectionState);
+  console.log('   iceConnectionState:', messaging.rtcConnection.iceConnectionState);
+  console.log('   iceGatheringState:', messaging.rtcConnection.iceGatheringState);
+  console.log('   sctp?.state:', messaging.rtcConnection.sctp?.state);
+  console.log('   signalingState:', messaging.rtcConnection.signalingState);
+};
+
+messaging.rtcConnection.onconnectionstatechange = logConnectionState('Connection state change');
+
+messaging.on.iceCandidate = logConnectionState('ICE candidate');
+
+messaging.rtcConnection.onicecandidateerror = logConnectionState('ICE Candidate error');
+
+messaging.rtcConnection.oniceconnectionstatechange = logConnectionState(
+  'ICE Connection state change',
+);
+
+messaging.rtcConnection.onicegatheringstatechange = logConnectionState(
+  'ICE gathering state change',
+);
+
+messaging.rtcConnection.onnegotiationneeded = logConnectionState('Negotiation needed');
+
+messaging.rtcConnection.onsignalingstatechange = logConnectionState('Signaling state change');
 
 startConnection.onclick = async () => {
   peerModeSelection.style.display = 'none';
