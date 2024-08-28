@@ -25,6 +25,7 @@
     "qr-scanner": "^1.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-external-events": "^1.0.3",
     "react-qr-code": "^2.0.12"
   },
   "private": true

@@ -23,10 +23,6 @@ function App() {
           Add connection
         </button>
       </div>
-      <p style={{ backgroundColor: '#ffdb99', margin: 8, padding: 8 }}>
-        🛜 If a peer is using a private network (e.g. a WiFi connection) the other peer needs to use
-        the same private network
-      </p>
     </React.Fragment>
   );
 }

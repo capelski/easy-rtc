@@ -22,6 +22,11 @@ const sendMessage = document.getElementById('send-message')!;
 const messagingHistory = document.getElementById('messaging-history')!;
 const closeConnection = document.getElementById('close-connection')!;
 const reset = document.getElementById('reset')!;
+const connectionError = document.getElementById('connection-error')!;
+const errorReset = document.getElementById('error-reset')!;
+const toggleRtcActivity = document.getElementById('toggle-rtc-activity')!;
+const rtcActivity = document.getElementById('rtc-activity')!;
+const rtcActivityLog = document.getElementById('rtc-activity-log')!;
 const connectionState = document.getElementById('connectionState')!;
 const iceConnectionState = document.getElementById('iceConnectionState')!;
 const iceGatheringState = document.getElementById('iceGatheringState')!;
@@ -63,34 +68,38 @@ messaging.on.connectionClosed = () => {
   updateConnectionState();
 };
 
+const updateRtcActivityLog = (text: string) => {
+  const div = document.createElement('div');
+  div.innerText = text;
+  rtcActivityLog.prepend(div);
+};
+
 const logConnectionState = (message: string) => (event: any) => {
   updateConnectionState();
-
-  console.log(message, event);
-  console.log('   connectionState:', messaging.rtcConnection.connectionState);
-  console.log('   iceConnectionState:', messaging.rtcConnection.iceConnectionState);
-  console.log('   iceGatheringState:', messaging.rtcConnection.iceGatheringState);
-  console.log('   sctp?.state:', messaging.rtcConnection.sctp?.state);
-  console.log('   signalingState:', messaging.rtcConnection.signalingState);
+  updateRtcActivityLog(
+    `${message} - connectionState: ${messaging.rtcConnection.connectionState} / iceConnectionState: ${messaging.rtcConnection.iceConnectionState} / iceGatheringState: ${messaging.rtcConnection.iceGatheringState} / state: ${messaging.rtcConnection.sctp?.state} / signalingState: ${messaging.rtcConnection.signalingState}`,
+  );
 };
 
 messaging.on.connectionStateChange = logConnectionState('Connection state change');
 
 messaging.on.iceCandidate = (event) => {
-  console.log('ICE candidate', event);
-  console.log('   protocol:', event.candidate?.protocol);
-  console.log('   type:', event.candidate?.type);
-  console.log('   address:', event.candidate?.address);
-  console.log('   relatedAddress:', event.candidate?.relatedAddress);
+  updateRtcActivityLog(
+    `ICE candidate - protocol: ${event.candidate?.protocol} / type: ${event.candidate?.type} / address: ${event.candidate?.address} / relatedAddress: ${event.candidate?.relatedAddress}`,
+  );
 };
 
-messaging.rtcConnection.onicecandidateerror = logConnectionState('ICE Candidate error');
+messaging.rtcConnection.onicecandidateerror = (event) => {
+  updateRtcActivityLog(
+    `ICE candidate error - errorCode: ${event.errorCode} / errorText: ${event.errorText} / address: ${event.address}`,
+  );
+};
 
 messaging.rtcConnection.oniceconnectionstatechange = logConnectionState(
   'ICE Connection state change',
 );
 
-messaging.on.iceGatheringStateChange = logConnectionState('ICE gathering state change');
+messaging.on.iceGatheringStateChange = logConnectionState('ICE Gathering state change');
 
 messaging.rtcConnection.onnegotiationneeded = logConnectionState('Negotiation needed');
 
@@ -99,10 +108,14 @@ messaging.rtcConnection.onsignalingstatechange = logConnectionState('Signaling s
 startConnection.onclick = async () => {
   peerModeSelection.style.display = 'none';
   waitingPeerData.style.display = 'block';
-  await messaging.startConnection();
+  try {
+    await messaging.startConnection();
+    starterPeer.style.display = 'block';
+    starterLocalData.value = messaging.localPeerData!;
+  } catch {
+    connectionError.style.display = 'block';
+  }
   waitingPeerData.style.display = 'none';
-  starterPeer.style.display = 'block';
-  starterLocalData.value = messaging.localPeerData!;
 };
 
 copyStarterCode.onclick = () => {
@@ -127,10 +140,14 @@ joinConnection.onclick = async () => {
   const remotePeerData = joinerRemoteData.value;
   peerModeSelection.style.display = 'none';
   waitingPeerData.style.display = 'block';
-  await messaging.joinConnection(remotePeerData);
+  try {
+    await messaging.joinConnection(remotePeerData);
+    joinerPeer.style.display = 'block';
+    joinerLocalData.value = messaging.localPeerData!;
+  } catch {
+    connectionError.style.display = 'block';
+  }
   waitingPeerData.style.display = 'none';
-  joinerPeer.style.display = 'block';
-  joinerLocalData.value = messaging.localPeerData!;
 };
 
 copyVerificationCode.onclick = () => {
@@ -169,7 +186,7 @@ closeConnection.onclick = () => {
   messaging.closeConnection();
 };
 
-reset.onclick = () => {
+reset.onclick = errorReset.onclick = () => {
   messagingHistory.innerHTML = '';
   messagingArea.style.display = 'none';
   peerModeSelection.style.display = 'block';
@@ -183,6 +200,12 @@ reset.onclick = () => {
   closeConnection.removeAttribute('disabled');
   reset.setAttribute('disabled', 'true');
   messaging.reset();
+};
+
+toggleRtcActivity.onclick = () => {
+  const isDisplayed = rtcActivity.style.display === 'block';
+  rtcActivity.style.display = isDisplayed ? 'none' : 'block';
+  toggleRtcActivity.textContent = `${isDisplayed ? 'Show' : 'Hide'} RTC activity`;
 };
 
 document.addEventListener('DOMContentLoaded', function () {

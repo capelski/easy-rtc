@@ -6,6 +6,7 @@ import {
 } from '@easy-rtc/react';
 import QrScanner from 'qr-scanner';
 import React, { useEffect, useRef, useState } from 'react';
+import { useExternalEvents } from 'react-external-events';
 import QRCode from 'react-qr-code';
 
 export const remoteDataParameterName = 'd';
@@ -20,43 +21,49 @@ export type ConnectionProps = {
 };
 
 export const Connection: React.FC<ConnectionProps> = (props) => {
+  const [displayRtcActivity, setDisplayRtcActivity] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [remotePeerData, setRemotePeerData] = useState('');
+  const [rtcActivity, setRtcActivity] = useState<string[]>([]);
   const [textMessage, setTextMessage] = useState('');
   const [useQRCode, setUseQRCode] = useState(false);
 
+  const externalMessages = useExternalEvents<string>();
   const messaging = useMessagingConnection(props.connection);
 
-  const logConnectionState = (message: string) => (event: any) => {
-    console.log(message, event);
-    console.log('   connectionState:', messaging.rtcConnection.connectionState);
-    console.log('   iceConnectionState:', messaging.rtcConnection.iceConnectionState);
-    console.log('   iceGatheringState:', messaging.rtcConnection.iceGatheringState);
-    console.log('   sctp?.state:', messaging.rtcConnection.sctp?.state);
-    console.log('   signalingState:', messaging.rtcConnection.signalingState);
-  };
+  useEffect(() => {
+    const logConnectionState = (message: string) => () => {
+      externalMessages.registerEvent(
+        `${message} - connectionState: ${messaging.rtcConnection.connectionState} / iceConnectionState: ${messaging.rtcConnection.iceConnectionState} / iceGatheringState: ${messaging.rtcConnection.iceGatheringState} / state: ${messaging.rtcConnection.sctp?.state} / signalingState: ${messaging.rtcConnection.signalingState}`,
+      );
+    };
 
-  messaging.on('connectionStateChange', logConnectionState('Connection state change'));
+    messaging.on('connectionStateChange', logConnectionState('Connection state change'));
 
-  messaging.on('iceCandidate', (event) => {
-    console.log(
-      `ICE candidate - protocol: ${event.candidate?.protocol} / type: ${event.candidate?.type} / address: ${event.candidate?.address} / relatedAddress: ${event.candidate?.relatedAddress}`,
-    );
+    messaging.on('iceCandidate', (event) => {
+      externalMessages.registerEvent(
+        `ICE candidate - protocol: ${event.candidate?.protocol} / type: ${event.candidate?.type} / address: ${event.candidate?.address} / relatedAddress: ${event.candidate?.relatedAddress}`,
+      );
+    });
+
+    messaging.on('iceCandidateError', (event) => {
+      externalMessages.registerEvent(
+        `ICE candidate error - errorCode: ${event.errorCode} / errorText: ${event.errorText} / address: ${event.address}`,
+      );
+    });
+
+    messaging.on('iceConnectionStateChange', logConnectionState('ICE Connection state change'));
+
+    messaging.on('iceGatheringStateChange', logConnectionState('ICE Gathering state change'));
+
+    messaging.on('negotiationNeeded', logConnectionState('Negotiation needed'));
+
+    messaging.on('signalingStateChange', logConnectionState('Signaling state change'));
+  }, [rtcActivity]);
+
+  externalMessages.processNext((message) => {
+    setRtcActivity([message, ...rtcActivity]);
   });
-
-  messaging.on('iceCandidateError', (event) => {
-    console.log(
-      `ICE candidate error - errorCode: ${event.errorCode} / errorText: ${event.errorText} / address: ${event.address}`,
-    );
-  });
-
-  messaging.on('iceConnectionStateChange', logConnectionState('ICE Connection state change'));
-
-  messaging.on('iceGatheringStateChange', logConnectionState('ICE gathering state change'));
-
-  messaging.on('negotiationNeeded', logConnectionState('Negotiation needed'));
-
-  messaging.on('signalingStateChange', logConnectionState('Signaling state change'));
 
   useEffect(() => {
     // The event handler needs to be re-declared every time messages changes
@@ -266,28 +273,64 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
         </React.Fragment>
       )}
 
-      <p style={{ fontStyle: 'italic' }}>
-        <span>
-          Connection state:{' '}
-          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.connectionState}</span> /{' '}
-        </span>
-        <span>
-          ICE connection state:{' '}
-          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.iceConnectionState}</span> /{' '}
-        </span>
-        <span>
-          ICE gathering state:{' '}
-          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.iceGatheringState}</span> /{' '}
-        </span>
-        <span>
-          SCTP state:{' '}
-          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.sctp?.state || '-'}</span> /{' '}
-        </span>
-        <span>
-          Signaling state:{' '}
-          <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.signalingState}</span>
-        </span>
-      </p>
+      {messaging.status === ConnectionStatus.errored && (
+        <div>
+          <p>Could not establish connection</p>
+          <button onClick={reset}>Reset</button>
+        </div>
+      )}
+
+      <div>
+        <button
+          onClick={() => {
+            setDisplayRtcActivity(!displayRtcActivity);
+          }}
+          type="button"
+        >
+          {displayRtcActivity ? 'Hide' : 'Show'} RTC activity
+        </button>
+        {displayRtcActivity && (
+          <div>
+            <p style={{ fontStyle: 'italic' }}>
+              <span>
+                Connection state:{' '}
+                <span style={{ fontWeight: 'bold' }}>
+                  {messaging.rtcConnection.connectionState}
+                </span>{' '}
+                /{' '}
+              </span>
+              <span>
+                ICE connection state:{' '}
+                <span style={{ fontWeight: 'bold' }}>
+                  {messaging.rtcConnection.iceConnectionState}
+                </span>{' '}
+                /{' '}
+              </span>
+              <span>
+                ICE gathering state:{' '}
+                <span style={{ fontWeight: 'bold' }}>
+                  {messaging.rtcConnection.iceGatheringState}
+                </span>{' '}
+                /{' '}
+              </span>
+              <span>
+                SCTP state:{' '}
+                <span style={{ fontWeight: 'bold' }}>
+                  {messaging.rtcConnection.sctp?.state || '-'}
+                </span>{' '}
+                /{' '}
+              </span>
+              <span>
+                Signaling state:{' '}
+                <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.signalingState}</span>
+              </span>
+            </p>
+            {rtcActivity.map((text, index) => (
+              <div key={index}>{text}</div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
