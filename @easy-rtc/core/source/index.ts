@@ -1,3 +1,4 @@
+export * from './connection-status';
 export * from './messaging-connection';
 export * from './messaging-group';
 export * from './messaging-handlers';

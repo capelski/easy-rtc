@@ -1,3 +1,4 @@
+import { ConnectionStatus } from './connection-status';
 import { DefaultMessageType, MessagingHandlers } from './messaging-handlers';
 import { PeerMode } from './peer-mode';
 import { deserializePeerData, serializePeerData } from './serialization';
@@ -13,7 +14,10 @@ export interface MessagingConnectionOptions extends RTCConfiguration {
 
 export class MessagingConnection<TMessage = DefaultMessageType> {
   protected _rtcConnection: RTCPeerConnection = undefined!;
-  get rtcConnection(): Omit<RTCPeerConnection, 'onicecandidate' | 'ondatachannel'> {
+  get rtcConnection(): Omit<
+    RTCPeerConnection,
+    'onconnectionstatechange' | 'ondatachannel' | 'onicecandidate' | 'onicegatheringstatechange'
+  > {
     return this._rtcConnection;
   }
 
@@ -24,8 +28,8 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
 
   protected configuration: RTCConfiguration | undefined;
   protected minification: boolean | undefined;
-  protected peerDataReadyTimeout: number | undefined;
-  protected peerDataResolver: ((peerData: string) => void) | undefined;
+  protected peerDataResolve: ((peerData: string) => void) | undefined;
+  protected peerDataReject: ((error: Error) => void) | undefined;
 
   readonly on: MessagingHandlers<TMessage> = {};
 
@@ -39,8 +43,9 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
     return this._peerMode;
   }
 
-  get isActive() {
-    return !!this.dataChannel;
+  protected _status: ConnectionStatus = undefined!;
+  get status() {
+    return this._status;
   }
 
   constructor(options: MessagingConnectionOptions = {}) {
@@ -68,6 +73,7 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
    * the other peer to complete the connection */
   async joinConnection(remoteData: string) {
     this._peerMode = PeerMode.joiner;
+    this._status = ConnectionStatus.pending;
 
     const remotePeerData = deserializePeerData(remoteData, this.minification);
     await this._rtcConnection.setRemoteDescription(remotePeerData.session);
@@ -76,8 +82,9 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
       await this._rtcConnection.addIceCandidate(candidate);
     }
 
-    const connectionPromise = new Promise<string>((resolve) => {
-      this.peerDataResolver = resolve;
+    const connectionPromise = new Promise<string>((resolve, reject) => {
+      this.peerDataResolve = resolve;
+      this.peerDataReject = reject;
     });
 
     this.session = await this._rtcConnection.createAnswer();
@@ -90,30 +97,59 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
   reset() {
     this.localIceCandidates = [];
     this.session = undefined;
-    this.peerDataReadyTimeout = undefined;
-    this.peerDataResolver = undefined;
+    this.peerDataResolve = undefined;
+    this.peerDataReject = undefined;
     this._peerMode = undefined;
     this._localPeerData = undefined;
+    this._status = ConnectionStatus.new;
 
     this._rtcConnection = new RTCPeerConnection(this.configuration);
 
     this._rtcConnection.onicecandidate = (event) => {
       if (event.candidate) {
         this.localIceCandidates.push(event.candidate);
+      }
 
-        if (this.peerDataReadyTimeout) {
-          clearTimeout(this.peerDataReadyTimeout);
-        }
-        this.peerDataReadyTimeout = window.setTimeout(() => {
+      this.on.iceCandidate?.bind(this._rtcConnection)(event);
+    };
+
+    this._rtcConnection.onicegatheringstatechange = (event) => {
+      if (this._rtcConnection.iceGatheringState === 'complete') {
+        if (
+          (this._peerMode === PeerMode.starter &&
+            this._rtcConnection.iceConnectionState === 'new') ||
+          (this._peerMode === PeerMode.joiner &&
+            this._rtcConnection.iceConnectionState === 'connected')
+        ) {
           this._localPeerData = serializePeerData(
             { candidates: this.localIceCandidates, session: this.session! },
             this.minification,
           );
-          this.peerDataResolver!(this._localPeerData);
-        }, 300);
+          this.peerDataResolve!(this._localPeerData);
+        } else {
+          this.peerDataReject!(
+            new Error(
+              'Error during ICE gathering. Use chrome://webrtc-internals to troubleshoot the problem',
+            ),
+          );
+          this._status = ConnectionStatus.errored;
+        }
       }
 
-      this.on.iceCandidate?.bind(this._rtcConnection)(event);
+      this.on.iceGatheringStateChange?.bind(this._rtcConnection)(event);
+    };
+
+    this._rtcConnection.onconnectionstatechange = (event) => {
+      if (
+        this._rtcConnection.connectionState === 'disconnected' &&
+        this._rtcConnection.iceConnectionState === 'disconnected' &&
+        this.dataChannel
+      ) {
+        this._status = ConnectionStatus.closed;
+        this.on.connectionClosed?.(this);
+      }
+
+      this.on.connectionStateChange?.bind(this._rtcConnection)(event);
     };
 
     this._rtcConnection.ondatachannel = (event) => {
@@ -135,12 +171,14 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
   /** Starts a connection and returns the data needed by the other peer to join the connection */
   async startConnection() {
     this._peerMode = PeerMode.starter;
+    this._status = ConnectionStatus.pending;
 
     const dataChannel = this._rtcConnection.createDataChannel('data-channel');
     this.setDataChannelHandlers(dataChannel);
 
-    const connectionPromise = new Promise<string>((resolve) => {
-      this.peerDataResolver = resolve;
+    const connectionPromise = new Promise<string>((resolve, reject) => {
+      this.peerDataResolve = resolve;
+      this.peerDataReject = reject;
     });
 
     this.session = await this._rtcConnection.createOffer();
@@ -153,6 +191,7 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
   protected setDataChannelHandlers(dataChannel: RTCDataChannel) {
     dataChannel.onopen = () => {
       this.dataChannel = dataChannel;
+      this._status = ConnectionStatus.active;
       this.on.connectionReady?.(this);
     };
 
@@ -163,6 +202,7 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
 
     dataChannel.onclose = () => {
       this.dataChannel = undefined;
+      this._status = ConnectionStatus.closed;
       this.on.connectionClosed?.(this);
     };
   }

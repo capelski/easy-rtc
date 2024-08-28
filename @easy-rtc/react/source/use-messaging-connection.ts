@@ -1,4 +1,5 @@
 import {
+  ConnectionStatus,
   DefaultMessageType,
   MessagingConnection,
   MessagingConnectionOptions,
@@ -19,10 +20,8 @@ export type MessagingConnectionReact<TMessage = DefaultMessageType> = Pick<
   | 'sendMessage'
   | 'startConnection'
 > & {
-  readonly hasCompletedConnection: boolean;
-  readonly isActive: boolean;
   readonly localPeerData: string;
-
+  // Exposing a function instead of an object so the caller gets typed handler parameters
   on(event: 'connectionClosed', handler: OnConnectionClosedHandler<TMessage>): void;
   on(event: 'connectionReady', handler: OnConnectionReadyHandler<TMessage>): void;
   on(event: 'connectionStateChange', handler: RTCPeerConnection['onconnectionstatechange']): void;
@@ -44,15 +43,14 @@ export type MessagingConnectionReact<TMessage = DefaultMessageType> = Pick<
   readonly peerMode: PeerMode | undefined;
   readonly rtcConnection: Omit<
     MessagingConnection<TMessage>['rtcConnection'],
-    | 'onconnectionstatechange'
     | 'ondatachannel'
     | 'onicecandidate'
     | 'onicecandidateerror'
     | 'oniceconnectionstatechange'
-    | 'onicegatheringstatechange'
     | 'onnegotiationneeded'
     | 'onsignalingstatechange'
   >;
+  readonly status: ConnectionStatus;
 };
 
 export function useMessagingConnection<
@@ -67,10 +65,9 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
 export function useMessagingConnection<TMessage = DefaultMessageType>(
   connectionOrOptions?: MessagingConnection<TMessage> | MessagingConnectionOptions,
 ): MessagingConnectionReact<TMessage> {
-  const [hasCompletedConnection, setHasCompletedConnection] = useState(false);
-  const [isActive, setIsActive] = useState(false);
   const [localPeerData, setLocalPeerData] = useState('');
   const [peerMode, setPeerMode] = useState<PeerMode>();
+  const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.new);
 
   const [, forceUpdate] = useState<{}>();
 
@@ -94,19 +91,22 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
     };
 
     connection.on.connectionClosed = () => {
-      setIsActive(false);
+      setStatus(connection.status);
       handlers.connectionClosed?.(connection);
     };
 
     connection.on.connectionReady = () => {
-      setHasCompletedConnection(true);
-      setIsActive(true);
+      setStatus(connection.status);
       handlers.connectionReady?.(connection);
+    };
+
+    connection.on.messageReceived = (data) => {
+      handlers.messageReceived?.(data, connection);
     };
 
     const castConnection = connection.rtcConnection as RTCPeerConnection;
 
-    connection.rtcConnection.onconnectionstatechange = function (event) {
+    connection.on.connectionStateChange = function (event) {
       forceUpdate({});
       handlers.connectionStateChange?.bind(castConnection)(event);
     };
@@ -131,9 +131,9 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
       handlers.iceConnectionStateChange?.bind(castConnection)(event);
     };
 
-    connection.rtcConnection.onicegatheringstatechange = function (event) {
+    connection.on.iceGatheringStateChange = function (event) {
       forceUpdate({});
-      handlers.iceGatheringStateChange?.bind(castConnection)(event);
+      handlers.iceConnectionStateChange?.bind(castConnection)(event);
     };
 
     connection.rtcConnection.onnegotiationneeded = function (event) {
@@ -149,17 +149,29 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
     const startConnection = async () => {
       const connectionPromise = connection.startConnection();
       setPeerMode(connection.peerMode);
-      const nextLocalPeerData = await connectionPromise;
-      setLocalPeerData(nextLocalPeerData);
-      return nextLocalPeerData;
+      setStatus(connection.status);
+      try {
+        const nextLocalPeerData = await connectionPromise;
+        setLocalPeerData(nextLocalPeerData);
+        return nextLocalPeerData;
+      } catch (error) {
+        setStatus(connection.status);
+        throw error;
+      }
     };
 
     const joinConnection = async (remotePeerData: string) => {
       const connectionPromise = connection.joinConnection(remotePeerData);
       setPeerMode(connection.peerMode);
-      const nextLocalPeerData = await connectionPromise;
-      setLocalPeerData(nextLocalPeerData);
-      return nextLocalPeerData;
+      setStatus(connection.status);
+      try {
+        const nextLocalPeerData = await connectionPromise;
+        setLocalPeerData(nextLocalPeerData);
+        return nextLocalPeerData;
+      } catch (error) {
+        setStatus(connection.status);
+        throw error;
+      }
     };
 
     const completeConnection: MessagingConnection<TMessage>['completeConnection'] =
@@ -220,10 +232,9 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
 
     const reset = () => {
       connection.reset();
-      setHasCompletedConnection(false);
-      setIsActive(false);
       setLocalPeerData('');
       setPeerMode(connection.peerMode);
+      setStatus(connection.status);
     };
 
     return {
@@ -248,10 +259,9 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
     sendMessage,
     startConnection,
     // State
-    hasCompletedConnection,
-    isActive,
     localPeerData,
     peerMode,
     rtcConnection,
+    status,
   };
 }

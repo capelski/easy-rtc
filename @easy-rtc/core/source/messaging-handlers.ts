@@ -16,7 +16,9 @@ export type OnMessageReceivedHandler<TMessage = DefaultMessageType> = (
 export type MessagingHandlers<TMessage = DefaultMessageType> = {
   connectionClosed?: OnConnectionClosedHandler<TMessage>;
   connectionReady?: OnConnectionReadyHandler<TMessage>;
+  connectionStateChange?: RTCPeerConnection['onconnectionstatechange'];
   dataChannel?: RTCPeerConnection['ondatachannel'];
   iceCandidate?: RTCPeerConnection['onicecandidate'];
+  iceGatheringStateChange?: RTCPeerConnection['onicegatheringstatechange'];
   messageReceived?: OnMessageReceivedHandler<TMessage>;
 };

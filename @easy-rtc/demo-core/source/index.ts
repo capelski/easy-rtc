@@ -63,10 +63,10 @@ messaging.on.connectionClosed = () => {
   updateConnectionState();
 };
 
-const logConnectionState = (message: string) => () => {
+const logConnectionState = (message: string) => (event: any) => {
   updateConnectionState();
 
-  console.log(message);
+  console.log(message, event);
   console.log('   connectionState:', messaging.rtcConnection.connectionState);
   console.log('   iceConnectionState:', messaging.rtcConnection.iceConnectionState);
   console.log('   iceGatheringState:', messaging.rtcConnection.iceGatheringState);
@@ -74,9 +74,15 @@ const logConnectionState = (message: string) => () => {
   console.log('   signalingState:', messaging.rtcConnection.signalingState);
 };
 
-messaging.rtcConnection.onconnectionstatechange = logConnectionState('Connection state change');
+messaging.on.connectionStateChange = logConnectionState('Connection state change');
 
-messaging.on.iceCandidate = logConnectionState('ICE candidate');
+messaging.on.iceCandidate = (event) => {
+  console.log('ICE candidate', event);
+  console.log('   protocol:', event.candidate?.protocol);
+  console.log('   type:', event.candidate?.type);
+  console.log('   address:', event.candidate?.address);
+  console.log('   relatedAddress:', event.candidate?.relatedAddress);
+};
 
 messaging.rtcConnection.onicecandidateerror = logConnectionState('ICE Candidate error');
 
@@ -84,9 +90,7 @@ messaging.rtcConnection.oniceconnectionstatechange = logConnectionState(
   'ICE Connection state change',
 );
 
-messaging.rtcConnection.onicegatheringstatechange = logConnectionState(
-  'ICE gathering state change',
-);
+messaging.on.iceGatheringStateChange = logConnectionState('ICE gathering state change');
 
 messaging.rtcConnection.onnegotiationneeded = logConnectionState('Negotiation needed');
 

@@ -1,4 +1,9 @@
-import { MessagingConnection, PeerMode, useMessagingConnection } from '@easy-rtc/react';
+import {
+  ConnectionStatus,
+  MessagingConnection,
+  PeerMode,
+  useMessagingConnection,
+} from '@easy-rtc/react';
 import QrScanner from 'qr-scanner';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
@@ -22,8 +27,8 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
   const messaging = useMessagingConnection(props.connection);
 
-  const logConnectionState = (message: string) => () => {
-    console.log(message);
+  const logConnectionState = (message: string) => (event: any) => {
+    console.log(message, event);
     console.log('   connectionState:', messaging.rtcConnection.connectionState);
     console.log('   iceConnectionState:', messaging.rtcConnection.iceConnectionState);
     console.log('   iceGatheringState:', messaging.rtcConnection.iceGatheringState);
@@ -33,9 +38,17 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
   messaging.on('connectionStateChange', logConnectionState('Connection state change'));
 
-  messaging.on('iceCandidate', logConnectionState('ICE candidate'));
+  messaging.on('iceCandidate', (event) => {
+    console.log(
+      `ICE candidate - protocol: ${event.candidate?.protocol} / type: ${event.candidate?.type} / address: ${event.candidate?.address} / relatedAddress: ${event.candidate?.relatedAddress}`,
+    );
+  });
 
-  messaging.on('iceCandidateError', logConnectionState('ICE Candidate error'));
+  messaging.on('iceCandidateError', (event) => {
+    console.log(
+      `ICE candidate error - errorCode: ${event.errorCode} / errorText: ${event.errorText} / address: ${event.address}`,
+    );
+  });
 
   messaging.on('iceConnectionStateChange', logConnectionState('ICE Connection state change'));
 
@@ -107,7 +120,8 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
   return (
     <div style={{ backgroundColor: '#e6f3f7', margin: 8, padding: 8 }}>
-      {!messaging.isActive && !messaging.hasCompletedConnection && (
+      {(messaging.status === ConnectionStatus.new ||
+        messaging.status === ConnectionStatus.pending) && (
         <React.Fragment>
           {!messaging.peerMode ? (
             <div>
@@ -204,12 +218,13 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
         </React.Fragment>
       )}
 
-      {messaging.hasCompletedConnection && (
+      {(messaging.status === ConnectionStatus.active ||
+        messaging.status === ConnectionStatus.closed) && (
         <React.Fragment>
           <p>
             <span>Messages</span>
             <textarea
-              disabled={!messaging.isActive}
+              disabled={messaging.status === ConnectionStatus.closed}
               onChange={(event) => {
                 setTextMessage(event.target.value);
               }}
@@ -218,7 +233,7 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
               value={textMessage}
             ></textarea>
             <button
-              disabled={!messaging.isActive || !textMessage}
+              disabled={messaging.status === ConnectionStatus.closed || !textMessage}
               onClick={() => {
                 setMessages([...messages, { sender: 'You', text: textMessage }]);
                 messaging.sendMessage(textMessage);
@@ -237,14 +252,14 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
           </div>
           <p>
             <button
-              disabled={!messaging.isActive}
+              disabled={messaging.status === ConnectionStatus.closed}
               onClick={() => {
                 messaging.closeConnection();
               }}
             >
               Close connection
             </button>
-            <button disabled={messaging.isActive} onClick={reset}>
+            <button disabled={messaging.status !== ConnectionStatus.closed} onClick={reset}>
               Reset
             </button>
           </p>
