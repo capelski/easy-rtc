@@ -75,6 +75,7 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
   const reset = () => {
     setMessages([]);
     setRemotePeerData('');
+    setRtcActivity([]);
     setTextMessage('');
     setUseQRCode(false);
     messaging.reset();
@@ -276,7 +277,9 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
       {messaging.status === ConnectionStatus.errored && (
         <div>
           <p>Could not establish connection</p>
-          <button onClick={reset}>Reset</button>
+          <p>
+            <button onClick={reset}>Reset</button>
+          </p>
         </div>
       )}
 

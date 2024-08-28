@@ -199,6 +199,7 @@ reset.onclick = errorReset.onclick = () => {
   currentMessage.removeAttribute('disabled');
   closeConnection.removeAttribute('disabled');
   reset.setAttribute('disabled', 'true');
+  rtcActivityLog.innerHTML = '';
   messaging.reset();
 };
 
