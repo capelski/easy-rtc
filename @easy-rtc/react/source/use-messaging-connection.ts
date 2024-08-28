@@ -133,7 +133,7 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
 
     connection.on.iceGatheringStateChange = function (event) {
       forceUpdate({});
-      handlers.iceConnectionStateChange?.bind(castConnection)(event);
+      handlers.iceGatheringStateChange?.bind(castConnection)(event);
     };
 
     connection.rtcConnection.onnegotiationneeded = function (event) {
