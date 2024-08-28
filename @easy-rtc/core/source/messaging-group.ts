@@ -1,3 +1,4 @@
+import { ConnectionStatus } from './connection-status';
 import { MessagingConnection, MessagingConnectionOptions } from './messaging-connection';
 import { DefaultMessageType } from './messaging-handlers';
 
@@ -34,7 +35,7 @@ export class MessagingGroup<TMessage = DefaultMessageType, TState = DefaultNodeS
   protected _nodes: MessagingNode<TMessage, TState>[] = [];
 
   get activeNodes() {
-    return this._nodes.filter((node) => node.connection.isActive);
+    return this._nodes.filter((node) => node.connection.status === ConnectionStatus.active);
   }
 
   get nodes() {
@@ -75,7 +76,7 @@ export class MessagingGroup<TMessage = DefaultMessageType, TState = DefaultNodeS
 
     const [node] = this._nodes.splice(index, 1);
 
-    if (node?.connection.isActive) {
+    if (node?.connection.status === ConnectionStatus.active) {
       node.connection.closeConnection();
     }
   }
