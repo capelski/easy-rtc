@@ -5,6 +5,7 @@ import {
   MessagingConnectionOptions,
   OnConnectionClosedHandler,
   OnConnectionReadyHandler,
+  OnIceCandidate,
   OnMessageReceivedHandler,
   PeerMode,
 } from '@easy-rtc/core';
@@ -26,7 +27,7 @@ export type MessagingConnectionReact<TMessage = DefaultMessageType> = Pick<
   on(event: 'connectionReady', handler: OnConnectionReadyHandler<TMessage>): void;
   on(event: 'connectionStateChange', handler: RTCPeerConnection['onconnectionstatechange']): void;
   on(event: 'dataChannel', handler: RTCPeerConnection['ondatachannel']): void;
-  on(event: 'iceCandidate', handler: RTCPeerConnection['onicecandidate']): void;
+  on(event: 'iceCandidate', handler: OnIceCandidate): void;
   on(event: 'iceCandidateError', handler: RTCPeerConnection['onicecandidateerror']): void;
   on(
     event: 'iceConnectionStateChange',
@@ -43,10 +44,9 @@ export type MessagingConnectionReact<TMessage = DefaultMessageType> = Pick<
   readonly peerMode: PeerMode | undefined;
   readonly rtcConnection: Omit<
     MessagingConnection<TMessage>['rtcConnection'],
-    | 'ondatachannel'
-    | 'onicecandidate'
     | 'onicecandidateerror'
     | 'oniceconnectionstatechange'
+    | 'onicegatheringstatechange'
     | 'onnegotiationneeded'
     | 'onsignalingstatechange'
   >;
@@ -116,9 +116,9 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
       handlers.dataChannel?.bind(castConnection)(event);
     };
 
-    connection.on.iceCandidate = function (event) {
+    connection.on.iceCandidate = function (candidate) {
       forceUpdate({});
-      handlers.iceCandidate?.bind(castConnection)(event);
+      handlers.iceCandidate?.(candidate);
     };
 
     connection.rtcConnection.onicecandidateerror = function (event) {
@@ -131,7 +131,7 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
       handlers.iceConnectionStateChange?.bind(castConnection)(event);
     };
 
-    connection.on.iceGatheringStateChange = function (event) {
+    connection.rtcConnection.onicegatheringstatechange = function (event) {
       forceUpdate({});
       handlers.iceGatheringStateChange?.bind(castConnection)(event);
     };
@@ -190,7 +190,7 @@ export function useMessagingConnection<TMessage = DefaultMessageType>(
       handler: RTCPeerConnection['onconnectionstatechange'],
     ): void;
     function on(event: 'dataChannel', handler: RTCPeerConnection['ondatachannel']): void;
-    function on(event: 'iceCandidate', handler: RTCPeerConnection['onicecandidate']): void;
+    function on(event: 'iceCandidate', handler: OnIceCandidate): void;
     function on(
       event: 'iceCandidateError',
       handler: RTCPeerConnection['onicecandidateerror'],

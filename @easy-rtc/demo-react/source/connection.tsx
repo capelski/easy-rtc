@@ -40,9 +40,9 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
     messaging.on('connectionStateChange', logConnectionState('Connection state change'));
 
-    messaging.on('iceCandidate', (event) => {
+    messaging.on('iceCandidate', (candidate) => {
       externalMessages.registerEvent(
-        `ICE candidate - protocol: ${event.candidate?.protocol} / type: ${event.candidate?.type} / address: ${event.candidate?.address} / relatedAddress: ${event.candidate?.relatedAddress}`,
+        `ICE candidate - protocol: ${candidate.protocol} / type: ${candidate.type} / address: ${candidate.address} / relatedAddress: ${candidate.relatedAddress}`,
       );
     });
 

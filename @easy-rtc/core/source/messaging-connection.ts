@@ -16,7 +16,7 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
   protected _rtcConnection: RTCPeerConnection = undefined!;
   get rtcConnection(): Omit<
     RTCPeerConnection,
-    'onconnectionstatechange' | 'ondatachannel' | 'onicecandidate' | 'onicegatheringstatechange'
+    'onconnectionstatechange' | 'ondatachannel' | 'onicecandidate'
   > {
     return this._rtcConnection;
   }
@@ -108,17 +108,13 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
     this._rtcConnection.onicecandidate = (event) => {
       if (event.candidate) {
         this.localIceCandidates.push(event.candidate);
-      }
-
-      this.on.iceCandidate?.bind(this._rtcConnection)(event);
-    };
-
-    this._rtcConnection.onicegatheringstatechange = (event) => {
-      if (this._rtcConnection.iceGatheringState === 'complete') {
+        this.on.iceCandidate?.(event.candidate);
+      } else {
+        // WebRTC finished collecting ICE candidates
         if (
-          (this._peerMode === PeerMode.starter &&
-            this._rtcConnection.iceConnectionState === 'new') ||
+          this._peerMode === PeerMode.starter ||
           (this._peerMode === PeerMode.joiner &&
+            this._rtcConnection.iceGatheringState === 'complete' &&
             this._rtcConnection.iceConnectionState === 'connected')
         ) {
           this._localPeerData = serializePeerData(
@@ -126,17 +122,8 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
             this.minification,
           );
           this.peerDataResolve!(this._localPeerData);
-        } else {
-          this.peerDataReject!(
-            new Error(
-              'Error during ICE gathering. Use chrome://webrtc-internals to troubleshoot the problem',
-            ),
-          );
-          this._status = ConnectionStatus.errored;
         }
       }
-
-      this.on.iceGatheringStateChange?.bind(this._rtcConnection)(event);
     };
 
     this._rtcConnection.onconnectionstatechange = (event) => {

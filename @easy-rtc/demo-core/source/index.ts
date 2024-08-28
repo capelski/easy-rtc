@@ -83,9 +83,9 @@ const logConnectionState = (message: string) => (event: any) => {
 
 messaging.on.connectionStateChange = logConnectionState('Connection state change');
 
-messaging.on.iceCandidate = (event) => {
+messaging.on.iceCandidate = (candidate) => {
   updateRtcActivityLog(
-    `ICE candidate - protocol: ${event.candidate?.protocol} / type: ${event.candidate?.type} / address: ${event.candidate?.address} / relatedAddress: ${event.candidate?.relatedAddress}`,
+    `ICE candidate - protocol: ${candidate.protocol} / type: ${candidate.type} / address: ${candidate.address} / relatedAddress: ${candidate.relatedAddress}`,
   );
 };
 
@@ -99,7 +99,9 @@ messaging.rtcConnection.oniceconnectionstatechange = logConnectionState(
   'ICE Connection state change',
 );
 
-messaging.on.iceGatheringStateChange = logConnectionState('ICE Gathering state change');
+messaging.rtcConnection.onicegatheringstatechange = logConnectionState(
+  'ICE Gathering state change',
+);
 
 messaging.rtcConnection.onnegotiationneeded = logConnectionState('Negotiation needed');
 
