@@ -30,7 +30,6 @@ const rtcActivityLog = document.getElementById('rtc-activity-log')!;
 const connectionState = document.getElementById('connectionState')!;
 const iceConnectionState = document.getElementById('iceConnectionState')!;
 const iceGatheringState = document.getElementById('iceGatheringState')!;
-const sctpState = document.getElementById('sctpState')!;
 const signalingState = document.getElementById('signalingState')!;
 
 const addMessage = (text: string) => {
@@ -41,19 +40,11 @@ const addMessage = (text: string) => {
 
 const messaging = new MessagingConnection({ minification: true });
 
-const updateConnectionState = () => {
-  connectionState.textContent = messaging.rtcConnection.connectionState;
-  iceConnectionState.textContent = messaging.rtcConnection.iceConnectionState;
-  iceGatheringState.textContent = messaging.rtcConnection.iceGatheringState;
-  sctpState.textContent = messaging.rtcConnection.sctp?.state || '-';
-  signalingState.textContent = messaging.rtcConnection.signalingState;
-};
-
 messaging.on.connectionReady = () => {
   starterPeer.style.display = 'none';
   joinerPeer.style.display = 'none';
   messagingArea.style.display = 'block';
-  updateConnectionState();
+  updateRTCActivityState();
 };
 
 messaging.on.messageReceived = (message) => {
@@ -65,47 +56,8 @@ messaging.on.connectionClosed = () => {
   sendMessage.setAttribute('disabled', 'true');
   closeConnection.setAttribute('disabled', 'true');
   reset.removeAttribute('disabled');
-  updateConnectionState();
+  updateRTCActivityState();
 };
-
-const updateRtcActivityLog = (text: string) => {
-  const div = document.createElement('div');
-  div.innerText = text;
-  rtcActivityLog.prepend(div);
-};
-
-const logConnectionState = (message: string) => (event: any) => {
-  updateConnectionState();
-  updateRtcActivityLog(
-    `${message} - connectionState: ${messaging.rtcConnection.connectionState} / iceConnectionState: ${messaging.rtcConnection.iceConnectionState} / iceGatheringState: ${messaging.rtcConnection.iceGatheringState} / state: ${messaging.rtcConnection.sctp?.state} / signalingState: ${messaging.rtcConnection.signalingState}`,
-  );
-};
-
-messaging.on.connectionStateChange = logConnectionState('Connection state change');
-
-messaging.on.iceCandidate = (candidate) => {
-  updateRtcActivityLog(
-    `ICE candidate - protocol: ${candidate.protocol} / type: ${candidate.type} / address: ${candidate.address} / relatedAddress: ${candidate.relatedAddress}`,
-  );
-};
-
-messaging.rtcConnection.onicecandidateerror = (event) => {
-  updateRtcActivityLog(
-    `ICE candidate error - errorCode: ${event.errorCode} / errorText: ${event.errorText} / address: ${event.address}`,
-  );
-};
-
-messaging.rtcConnection.oniceconnectionstatechange = logConnectionState(
-  'ICE Connection state change',
-);
-
-messaging.rtcConnection.onicegatheringstatechange = logConnectionState(
-  'ICE Gathering state change',
-);
-
-messaging.rtcConnection.onnegotiationneeded = logConnectionState('Negotiation needed');
-
-messaging.rtcConnection.onsignalingstatechange = logConnectionState('Signaling state change');
 
 startConnection.onclick = async () => {
   peerModeSelection.style.display = 'none';
@@ -188,7 +140,7 @@ closeConnection.onclick = () => {
   messaging.closeConnection();
 };
 
-reset.onclick = errorReset.onclick = () => {
+reset.onclick = () => {
   messagingHistory.innerHTML = '';
   messagingArea.style.display = 'none';
   peerModeSelection.style.display = 'block';
@@ -205,12 +157,6 @@ reset.onclick = errorReset.onclick = () => {
   messaging.reset();
 };
 
-toggleRtcActivity.onclick = () => {
-  const isDisplayed = rtcActivity.style.display === 'block';
-  rtcActivity.style.display = isDisplayed ? 'none' : 'block';
-  toggleRtcActivity.textContent = `${isDisplayed ? 'Show' : 'Hide'} RTC activity`;
-};
-
 document.addEventListener('DOMContentLoaded', function () {
   const params = new URL(document.location.toString()).searchParams;
   const data = params.get(remoteDataParameterName);
@@ -220,3 +166,59 @@ document.addEventListener('DOMContentLoaded', function () {
     window.history.pushState({}, '', window.location.origin + window.location.pathname);
   }
 });
+
+/********** RTC Activity logging ********/
+
+toggleRtcActivity.onclick = () => {
+  const isDisplayed = rtcActivity.style.display === 'block';
+  rtcActivity.style.display = isDisplayed ? 'none' : 'block';
+  toggleRtcActivity.textContent = `${isDisplayed ? 'Show' : 'Hide'} RTC activity`;
+};
+
+errorReset.onclick = reset.onclick;
+
+function updateRTCActivityState() {
+  connectionState.textContent = messaging.rtcConnection.connectionState;
+  iceConnectionState.textContent = messaging.rtcConnection.iceConnectionState;
+  iceGatheringState.textContent = messaging.rtcConnection.iceGatheringState;
+  signalingState.textContent = messaging.rtcConnection.signalingState;
+}
+
+const updateRtcActivityLog = (text: string) => {
+  const div = document.createElement('div');
+  div.innerText = text;
+  rtcActivityLog.prepend(div);
+};
+
+const logConnectionState = (message: string) => () => {
+  updateRTCActivityState();
+  updateRtcActivityLog(
+    `${message} - connectionState: ${messaging.rtcConnection.connectionState} / signalingState: ${messaging.rtcConnection.signalingState} / iceConnectionState: ${messaging.rtcConnection.iceConnectionState} / iceGatheringState: ${messaging.rtcConnection.iceGatheringState}`,
+  );
+};
+
+messaging.on.connectionStateChange = logConnectionState('Connection state change');
+
+messaging.on.iceCandidate = (candidate) => {
+  updateRtcActivityLog(
+    `ICE candidate - protocol: ${candidate.protocol} / type: ${candidate.type} / address: ${candidate.address} / relatedAddress: ${candidate.relatedAddress}`,
+  );
+};
+
+messaging.rtcConnection.onicecandidateerror = (event) => {
+  updateRtcActivityLog(
+    `ICE candidate error - errorCode: ${event.errorCode} / errorText: ${event.errorText} / address: ${event.address}`,
+  );
+};
+
+messaging.rtcConnection.oniceconnectionstatechange = logConnectionState(
+  'ICE Connection state change',
+);
+
+messaging.rtcConnection.onicegatheringstatechange = logConnectionState(
+  'ICE Gathering state change',
+);
+
+messaging.rtcConnection.onnegotiationneeded = logConnectionState('Negotiation needed');
+
+messaging.rtcConnection.onsignalingstatechange = logConnectionState('Signaling state change');

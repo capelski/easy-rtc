@@ -34,7 +34,7 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
   useEffect(() => {
     const logConnectionState = (message: string) => () => {
       externalMessages.registerEvent(
-        `${message} - connectionState: ${messaging.rtcConnection.connectionState} / iceConnectionState: ${messaging.rtcConnection.iceConnectionState} / iceGatheringState: ${messaging.rtcConnection.iceGatheringState} / state: ${messaging.rtcConnection.sctp?.state} / signalingState: ${messaging.rtcConnection.signalingState}`,
+        `${message} - connectionState: ${messaging.rtcConnection.connectionState} / signalingState: ${messaging.rtcConnection.signalingState} / iceConnectionState: ${messaging.rtcConnection.iceConnectionState} / iceGatheringState: ${messaging.rtcConnection.iceGatheringState}`,
       );
     };
 
@@ -276,7 +276,10 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
 
       {messaging.status === ConnectionStatus.errored && (
         <div>
-          <p>Could not establish connection</p>
+          <p>
+            Could not establish connection. Use chrome://webrtc-internals to troubleshoot the
+            problem
+          </p>
           <p>
             <button onClick={reset}>Reset</button>
           </p>
@@ -310,22 +313,15 @@ export const Connection: React.FC<ConnectionProps> = (props) => {
                 /{' '}
               </span>
               <span>
+                Signaling state:{' '}
+                <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.signalingState}</span>{' '}
+                /{' '}
+              </span>
+              <span>
                 ICE gathering state:{' '}
                 <span style={{ fontWeight: 'bold' }}>
                   {messaging.rtcConnection.iceGatheringState}
-                </span>{' '}
-                /{' '}
-              </span>
-              <span>
-                SCTP state:{' '}
-                <span style={{ fontWeight: 'bold' }}>
-                  {messaging.rtcConnection.sctp?.state || '-'}
-                </span>{' '}
-                /{' '}
-              </span>
-              <span>
-                Signaling state:{' '}
-                <span style={{ fontWeight: 'bold' }}>{messaging.rtcConnection.signalingState}</span>
+                </span>
               </span>
             </p>
             {rtcActivity.map((text, index) => (

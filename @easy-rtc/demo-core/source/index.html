@@ -68,7 +68,7 @@
       </div>
 
       <div id="connection-error" style="display: none">
-        <p>Could not establish connection</p>
+        <p>Could not establish connection. Use chrome://webrtc-internals to troubleshoot the problem</p>
         <p>
           <button id="error-reset" type="button" disabled>Reset</button>
         </p>
@@ -84,20 +84,16 @@
               <span id="connectionState" style="font-weight: bold">-</span> / 
             </span>
             <span>
+              Signaling state: 
+              <span id="signalingState" style="font-weight: bold">-</span> / 
+            </span>
+            <span>
               ICE connection state: 
               <span id="iceConnectionState" style="font-weight: bold">-</span> / 
             </span>
             <span>
               ICE gathering state: 
-              <span id="iceGatheringState" style="font-weight: bold">-</span> / 
-            </span>
-            <span>
-              SCTP state: 
-              <span id="sctpState" style="font-weight: bold">-</span> / 
-            </span>
-            <span>
-              Signaling state: 
-              <span id="signalingState" style="font-weight: bold">-</span>
+              <span id="iceGatheringState" style="font-weight: bold">-</span>
             </span>
           </p>
           <div id="rtc-activity-log"></div>

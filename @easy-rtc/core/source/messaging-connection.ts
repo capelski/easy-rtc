@@ -122,6 +122,13 @@ export class MessagingConnection<TMessage = DefaultMessageType> {
             this.minification,
           );
           this.peerDataResolve!(this._localPeerData);
+        } else {
+          this.peerDataReject!(
+            new Error(
+              'Error during ICE gathering. Use chrome://webrtc-internals to troubleshoot the problem',
+            ),
+          );
+          this._status = ConnectionStatus.errored;
         }
       }
     };
